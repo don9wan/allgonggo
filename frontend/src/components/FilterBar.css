@@ -1,0 +1,86 @@
+.filter-bar {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+
+.filter-bar__inner {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: flex-start;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-group__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.filter-group__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-background);
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.filter-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.filter-chip--active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(26, 86, 219, 0.06);
+}
+
+.filter-reset-btn {
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  transition: border-color 150ms ease, color 150ms ease;
+  align-self: center;
+}
+
+.filter-reset-btn:hover {
+  border-color: var(--color-state-rejected);
+  color: var(--color-state-rejected);
+}
+
+@media (max-width: 767px) {
+  .filter-bar__inner {
+    padding: 10px 16px;
+    gap: 8px 12px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-group {
+    flex-wrap: nowrap;
+  }
+}

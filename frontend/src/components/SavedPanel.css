@@ -1,0 +1,210 @@
+.saved-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+  animation: overlay-in 200ms ease;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.saved-panel {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  animation: panel-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+@keyframes panel-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.saved-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.saved-panel__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.saved-panel__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-btn);
+  color: var(--color-text-secondary);
+  transition: background 150ms ease;
+}
+
+.saved-panel__close:hover {
+  background: var(--color-surface);
+}
+
+.saved-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.saved-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 60px 20px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.saved-panel__empty p {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-top: 8px;
+}
+
+.saved-panel__empty span {
+  font-size: 14px;
+}
+
+.saved-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saved-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 150ms ease;
+}
+
+.saved-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.saved-card__company {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.saved-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.saved-card__sources {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.saved-card__source-link {
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 150ms ease;
+}
+
+.saved-card__source-link:hover {
+  background: var(--color-border);
+}
+
+.saved-card__source-link img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: white;
+}
+
+.saved-card__meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+}
+
+.saved-card__meta span + span::before {
+  content: "·";
+  margin-right: 8px;
+}
+
+.saved-card__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.saved-card__btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: var(--radius-btn);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: var(--color-background);
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.saved-card__btn--applied.active {
+  border-color: var(--color-state-applied);
+  color: var(--color-state-applied);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.saved-card__btn--rejected.active {
+  border-color: var(--color-state-rejected);
+  color: var(--color-state-rejected);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.saved-card__btn--return {
+  flex: 0;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.saved-card__btn--return:hover {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 767px) {
+  .saved-panel {
+    max-width: 100%;
+  }
+}
