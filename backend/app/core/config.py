@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     # 쉼표로 구분된 허용 오리진 목록 (Railway 환경변수로 주입)
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    ADMIN_KEY: str = "changeme"
 
     @property
     def cors_origins_list(self) -> List[str]:

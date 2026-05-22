@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.scheduler import start_scheduler, stop_scheduler
-from app.api import jobs
+from app.api import jobs, admin
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ app.add_middleware(
 )
 
 app.include_router(jobs.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 
 
 @app.get("/health")
