@@ -225,6 +225,54 @@ async def debug_wanted(x_admin_key: str = Header(...)):
         }
 
 
+@router.get("/debug/playwright")
+async def debug_playwright(x_admin_key: str = Header(...)):
+    """Playwright + Chromium 동작 여부 및 catch.co.kr 접근 테스트."""
+    _check_key(x_admin_key)
+    result = {"import": False, "launch": False, "goto": False, "fetch": False, "error": None, "page_title": None, "fetch_status": None, "items_count": None}
+    try:
+        from playwright.async_api import async_playwright
+        result["import"] = True
+    except ImportError as e:
+        result["error"] = f"import 실패: {e}"
+        return result
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+            result["launch"] = True
+            ctx = await browser.new_context(user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", locale="ko-KR")
+            page = await ctx.new_page()
+            try:
+                await page.goto("https://www.catch.co.kr", wait_until="networkidle", timeout=25000)
+                result["goto"] = True
+                result["page_title"] = await page.title()
+            except Exception as e:
+                result["error"] = f"goto 실패: {e}"
+                await browser.close()
+                return result
+            try:
+                fetch_result = await page.evaluate("""
+                async () => {
+                    const resp = await fetch(
+                        '/api/v1.0/recruit/information/getRecruitList?Career=1&Sort=0&curpage=1&pageSize=3&onRecruitYN=Y',
+                        { headers: { Accept: 'application/json' } }
+                    );
+                    const status = resp.status;
+                    const data = await resp.json();
+                    return { status, count: (data.recruitData || []).length };
+                }
+                """)
+                result["fetch"] = True
+                result["fetch_status"] = fetch_result.get("status")
+                result["items_count"] = fetch_result.get("count")
+            except Exception as e:
+                result["error"] = f"evaluate 실패: {e}"
+            await browser.close()
+    except Exception as e:
+        result["error"] = f"launch 실패: {e}"
+    return result
+
+
 @router.get("/debug/db")
 async def debug_db(x_admin_key: str = Header(...)):
     """DB 공고 수 + 소스별 집계."""
