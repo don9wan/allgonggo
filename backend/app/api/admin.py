@@ -140,6 +140,47 @@ async def recent_jobs(x_admin_key: str = Header(...), limit: int = 50, source: s
     ]
 
 
+@router.get("/debug/catch")
+async def debug_catch(x_admin_key: str = Header(...)):
+    """캐치 API Railway 환경 접근 테스트."""
+    _check_key(x_admin_key)
+    url = "https://www.catch.co.kr/api/v1.0/recruit/information/getRecruitList"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Referer": "https://www.catch.co.kr/NCS/RecruitSearch",
+    }
+    async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+        try:
+            r = await client.get(url, params={"Career": "1", "Sort": "0", "curpage": 1, "pageSize": 5, "onRecruitYN": "Y"}, headers=headers)
+            body = r.text[:500]
+            return {"status": r.status_code, "content_type": r.headers.get("content-type", ""), "body_preview": body}
+        except Exception as e:
+            return {"error": str(e)}
+
+
+@router.get("/debug/jumpit")
+async def debug_jumpit(x_admin_key: str = Header(...)):
+    """점핏 API Railway 환경 접근 테스트."""
+    _check_key(x_admin_key)
+    url = "https://jumpit-api.saramin.co.kr/api/positions"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Referer": "https://jumpit.saramin.co.kr/",
+        "Origin": "https://jumpit.saramin.co.kr",
+        "Accept-Language": "ko-KR,ko;q=0.9",
+    }
+    async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+        try:
+            r = await client.get(url, params={"jobCategory": 1, "career": 0, "sort": "rsp_rate", "highlight": "false", "page": 1}, headers=headers)
+            data = r.json() if r.status_code == 200 else {}
+            total = data.get("result", {}).get("totalCount", 0)
+            return {"status": r.status_code, "total": total}
+        except Exception as e:
+            return {"error": str(e)}
+
+
 @router.get("/debug/wanted")
 async def debug_wanted(x_admin_key: str = Header(...)):
     """원티드 API 응답 구조 확인 (신입/IT 필터 적용)."""
