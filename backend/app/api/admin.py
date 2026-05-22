@@ -42,32 +42,33 @@ async def trigger_crawl(x_admin_key: str = Header(...)):
 
 @router.get("/debug/wanted")
 async def debug_wanted(x_admin_key: str = Header(...)):
-    """원티드 API 1페이지 원본 응답 확인용."""
+    """원티드 API 후보 URL들을 모두 시도해서 작동하는 것 찾기."""
     _check_key(x_admin_key)
 
-    url = "https://www.wanted.co.kr/api/chaos/jobs/v1/wanted"
+    candidates = [
+        ("v1", "https://www.wanted.co.kr/api/chaos/jobs/v1/wanted", {"country": "kr", "tag_type_ids": "518", "limit": 5, "offset": 0}),
+        ("v2", "https://www.wanted.co.kr/api/chaos/jobs/v2/wanted", {"country": "kr", "tag_type_ids": "518", "limit": 5, "offset": 0}),
+        ("v4", "https://www.wanted.co.kr/api/v4/jobs", {"country": "kr", "job_sort": "job.latest_order", "years": -1, "locations": "all", "limit": 5}),
+        ("list", "https://www.wanted.co.kr/api/chaos/jobs/v1/job-positions", {"country": "kr", "limit": 5, "offset": 0}),
+    ]
     headers = {
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         "Referer": "https://www.wanted.co.kr/",
         "Wanted-User-Agent": "user-web",
     }
-    params = {
-        "country": "kr",
-        "tag_type_ids": "518,655,660",
-        "limit": 5,
-        "offset": 0,
-    }
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url, params=params, headers=headers, timeout=15)
-            return {
-                "status_code": resp.status_code,
-                "content_type": resp.headers.get("content-type"),
-                "body_preview": resp.text[:2000],
-            }
-    except Exception as e:
-        return {"error": str(e)}
+    results = {}
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        for name, url, params in candidates:
+            try:
+                resp = await client.get(url, params=params, headers=headers, timeout=10)
+                results[name] = {
+                    "status": resp.status_code,
+                    "preview": resp.text[:300],
+                }
+            except Exception as e:
+                results[name] = {"error": str(e)}
+    return results
 
 
 @router.get("/debug/db")
