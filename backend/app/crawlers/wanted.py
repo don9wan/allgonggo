@@ -13,6 +13,8 @@ API_URL = f"{BASE_URL}/api/v4/jobs"
 JOB_URL = f"{BASE_URL}/wd/{{job_id}}"
 MAX_PAGES = 5
 PAGE_SIZE = 100
+# tag_type_ids=518 → 개발·데이터 카테고리, years=0 → 신입/경력무관만
+IT_TAG_ID = 518
 
 
 def _parse_experience(pos: dict) -> str:
@@ -51,6 +53,13 @@ def _to_raw_job(pos: dict) -> Optional[RawJob]:
         return None
     if pos.get("hidden") or pos.get("status") == "closed":
         return None
+    # API-level years=0 filter should handle this, but double-check
+    annual_from = pos.get("annual_from", 0) or 0
+    if annual_from > 1:
+        return None
+
+    is_intern = "인턴" in title
+    emp_type = "인턴" if is_intern else "정규직"
 
     return RawJob(
         title=title,
@@ -59,7 +68,7 @@ def _to_raw_job(pos: dict) -> Optional[RawJob]:
         source="wanted",
         location=_parse_location(pos),
         experience=_parse_experience(pos),
-        employment_type="정규직",
+        employment_type=emp_type,
         raw_text=_parse_raw_text(pos),
     )
 
@@ -71,7 +80,8 @@ async def crawl_wanted() -> List[RawJob]:
     params = {
         "country": "kr",
         "job_sort": "job.latest_order",
-        "years": -1,
+        "years": 0,           # 신입/경력무관만
+        "tag_type_ids": IT_TAG_ID,  # 개발·데이터 카테고리
         "locations": "all",
         "limit": PAGE_SIZE,
         "offset": 0,

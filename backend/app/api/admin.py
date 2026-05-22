@@ -6,6 +6,14 @@ from fastapi import APIRouter, Header, HTTPException
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
 
+CRAWLER_STATUS = {
+    "wanted": {"active": True, "note": "API v4 정상 동작 (신입/IT 필터 적용)"},
+    "jumpit": {"active": False, "note": "API 307 리다이렉트 (브라우저 세션 필요)"},
+    "programmers": {"active": False, "note": "career.programmers.co.kr 도메인 없음 (NXDOMAIN)"},
+    "catch": {"active": False, "note": "Cloudflare WAF 차단 (403)"},
+    "groupby": {"active": False, "note": "공개 JSON API 없음 (Next.js SSR)"},
+}
+
 
 def _check_key(key: str):
     from app.core.config import settings
@@ -13,8 +21,29 @@ def _check_key(key: str):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
+@router.get("/status")
+async def get_status(x_admin_key: str = Header(...)):
+    """크롤러 상태 + DB 공고 수 조회."""
+    _check_key(x_admin_key)
+    from sqlalchemy import select, func
+    from app.db.database import AsyncSessionLocal
+    from app.models.job import Job, JobSource
+    async with AsyncSessionLocal() as session:
+        job_count = (await session.execute(select(func.count()).select_from(Job))).scalar()
+        source_count = (await session.execute(select(func.count()).select_from(JobSource))).scalar()
+        by_source = await session.execute(
+            select(JobSource.source, func.count(JobSource.id)).group_by(JobSource.source)
+        )
+        sources = {row[0]: row[1] for row in by_source}
+    return {
+        "db": {"jobs": job_count, "job_sources": source_count, "by_source": sources},
+        "crawlers": CRAWLER_STATUS,
+    }
+
+
 @router.post("/crawl")
 async def trigger_crawl(x_admin_key: str = Header(...)):
+    """모든 활성 크롤러를 백그라운드에서 실행."""
     _check_key(x_admin_key)
 
     async def run():
@@ -37,12 +66,56 @@ async def trigger_crawl(x_admin_key: str = Header(...)):
                 logger.error(f"{name} 실패: {e}")
 
     asyncio.create_task(run())
-    return {"status": "started"}
+    return {"status": "started", "active_crawlers": [k for k, v in CRAWLER_STATUS.items() if v["active"]]}
+
+
+@router.post("/crawl/wanted")
+async def trigger_wanted(x_admin_key: str = Header(...)):
+    """원티드만 즉시 크롤링 (결과 반환)."""
+    _check_key(x_admin_key)
+    from app.crawlers.wanted import crawl_wanted
+    jobs = await crawl_wanted()
+    return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
+
+
+@router.get("/jobs/recent")
+async def recent_jobs(x_admin_key: str = Header(...), limit: int = 50, source: str = None):
+    """최근 수집된 공고 목록."""
+    _check_key(x_admin_key)
+    from sqlalchemy import select, desc
+    from sqlalchemy.orm import selectinload
+    from app.db.database import AsyncSessionLocal
+    from app.models.job import Job, JobSource
+    async with AsyncSessionLocal() as session:
+        q = (
+            select(Job)
+            .options(selectinload(Job.sources))
+            .order_by(desc(Job.crawled_at))
+            .limit(limit)
+        )
+        if source:
+            subq = select(JobSource.job_id).where(JobSource.source == source).distinct()
+            q = q.where(Job.id.in_(subq))
+        result = await session.execute(q)
+        jobs = result.scalars().all()
+    return [
+        {
+            "id": str(j.id),
+            "title": j.title,
+            "company": j.company,
+            "source": j.sources[0].source if j.sources else "unknown",
+            "experience": j.experience,
+            "employment_type": j.employment_type,
+            "location": j.location,
+            "url": j.sources[0].url if j.sources else "",
+        }
+        for j in jobs
+    ]
 
 
 @router.get("/debug/wanted")
 async def debug_wanted(x_admin_key: str = Header(...)):
-    """원티드 API 후보 URL들을 모두 시도해서 작동하는 것 찾기."""
+    """원티드 API 응답 구조 확인 (신입/IT 필터 적용)."""
     _check_key(x_admin_key)
 
     headers = {
@@ -54,7 +127,15 @@ async def debug_wanted(x_admin_key: str = Header(...)):
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.get(
             "https://www.wanted.co.kr/api/v4/jobs",
-            params={"country": "kr", "job_sort": "job.latest_order", "years": -1, "locations": "all", "limit": 3},
+            params={
+                "country": "kr",
+                "job_sort": "job.latest_order",
+                "years": 0,
+                "tag_type_ids": 518,
+                "locations": "all",
+                "limit": 5,
+                "offset": 0,
+            },
             headers=headers,
             timeout=10,
         )
@@ -62,71 +143,23 @@ async def debug_wanted(x_admin_key: str = Header(...)):
         jobs = data.get("data", [])
         return {
             "status": resp.status_code,
-            "total": data.get("total", "?"),
-            "links": data.get("links"),
-            "first_job_keys": list(jobs[0].keys()) if jobs else [],
-            "first_job": jobs[0] if jobs else {},
-        }
-
-
-@router.get("/debug/all-sites")
-async def debug_all_sites(x_admin_key: str = Header(...)):
-    """5개 사이트 API 응답 구조 전체 확인."""
-    _check_key(x_admin_key)
-
-    sites = [
-        {
-            "name": "jumpit",
-            "url": "https://jumpit.saramin.co.kr/api/positions",
-            "params": {"sort": "rsp_rate", "page": 1},
-            "headers": {"Referer": "https://jumpit.saramin.co.kr/"},
-        },
-        {
-            "name": "programmers",
-            "url": "https://career.programmers.co.kr/api/job_positions",
-            "params": {"order": "recent", "page": 1},
-            "headers": {"Referer": "https://career.programmers.co.kr/job"},
-        },
-        {
-            "name": "catch",
-            "url": "https://www.catch.co.kr/api/recruit/list",
-            "params": {"pageIndex": 1, "pageSize": 3, "sortType": "LATEST"},
-            "headers": {"Referer": "https://www.catch.co.kr/"},
-        },
-        {
-            "name": "groupby",
-            "url": "https://www.groupby.kr/api/v1/jobs",
-            "params": {"page": 1, "size": 3},
-            "headers": {"Referer": "https://www.groupby.kr/"},
-        },
-    ]
-
-    default_headers = {
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    }
-
-    results = {}
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        for site in sites:
-            h = {**default_headers, **site["headers"]}
-            try:
-                resp = await client.get(site["url"], params=site["params"], headers=h, timeout=10)
-                body = resp.text[:1500]
-                results[site["name"]] = {
-                    "status": resp.status_code,
-                    "content_type": resp.headers.get("content-type", ""),
-                    "body": body,
+            "total": data.get("total"),
+            "count": len(jobs),
+            "sample_jobs": [
+                {
+                    "title": j.get("position"),
+                    "company": j.get("company", {}).get("name"),
+                    "annual_from": j.get("annual_from"),
+                    "annual_to": j.get("annual_to"),
                 }
-            except Exception as e:
-                results[site["name"]] = {"error": str(e)}
-
-    return results
+                for j in jobs
+            ],
+        }
 
 
 @router.get("/debug/db")
 async def debug_db(x_admin_key: str = Header(...)):
-    """DB 공고 수 확인용."""
+    """DB 공고 수 + 소스별 집계."""
     _check_key(x_admin_key)
     from sqlalchemy import text, select, func
     from app.db.database import AsyncSessionLocal
@@ -134,4 +167,8 @@ async def debug_db(x_admin_key: str = Header(...)):
     async with AsyncSessionLocal() as session:
         job_count = (await session.execute(select(func.count()).select_from(Job))).scalar()
         source_count = (await session.execute(select(func.count()).select_from(JobSource))).scalar()
-        return {"jobs": job_count, "job_sources": source_count}
+        by_source = await session.execute(
+            select(JobSource.source, func.count(JobSource.id)).group_by(JobSource.source)
+        )
+        sources = {row[0]: row[1] for row in by_source}
+    return {"total_jobs": job_count, "total_sources": source_count, "by_source": sources}

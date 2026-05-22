@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navbar } from "./components/Navbar";
 import { FilterBar } from "./components/FilterBar";
 import { FeedPage } from "./pages/FeedPage";
+import { AdminPage } from "./pages/AdminPage";
 import { SavedPanel } from "./components/SavedPanel";
 import { useJobStore } from "./store/jobStore";
 import type { SavedJob } from "./types/job";
@@ -17,16 +18,31 @@ const queryClient = new QueryClient({
   },
 });
 
+function useHash() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  return hash;
+}
+
 function AppInner() {
   const { filters, setFilters, unsaveJob } = useJobStore();
   const [showSaved, setShowSaved] = useState(false);
   const [returnedJob, setReturnedJob] = useState<SavedJob | null>(null);
+  const hash = useHash();
 
   const handleReturnToFeed = useCallback((job: SavedJob) => {
     unsaveJob(job.id);
     setReturnedJob(job);
     setShowSaved(false);
   }, [unsaveJob]);
+
+  if (hash === "#admin") {
+    return <AdminPage />;
+  }
 
   return (
     <>

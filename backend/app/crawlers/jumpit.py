@@ -1,107 +1,14 @@
 import logging
-import httpx
-from typing import List, Optional
+from typing import List
 from app.crawlers.base import RawJob
-from app.crawlers.utils import SafeClient
-from app.db.database import AsyncSessionLocal
-from app.crawlers.db_writer import upsert_jobs, is_caught_up
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://jumpit.saramin.co.kr"
-API_URL = f"{BASE_URL}/api/positions"
-JOB_URL = f"{BASE_URL}/position/{{job_id}}"
-MAX_PAGES = 5
-
-
-def _parse_experience(pos: dict) -> str:
-    min_c = pos.get("minCareer", 0) or 0
-    max_c = pos.get("maxCareer", 0) or 0
-    if min_c == 0 and max_c == 0:
-        return "경력무관"
-    if min_c == 0:
-        return "신입"
-    return f"경력 {min_c}년 이상"
-
-
-def _parse_location(pos: dict) -> str:
-    loc = pos.get("workPlace") or pos.get("address") or ""
-    return str(loc).strip() or "미정"
-
-
-def _parse_raw_text(pos: dict) -> str:
-    stacks = pos.get("techStacks", [])
-    stack_text = " ".join(
-        s if isinstance(s, str) else s.get("name", "") for s in stacks
-    )
-    parts = [
-        pos.get("title", ""),
-        pos.get("companyName", ""),
-        _parse_location(pos),
-        stack_text,
-    ]
-    return " ".join(filter(None, parts))
-
-
-def _to_raw_job(pos: dict) -> Optional[RawJob]:
-    job_id = pos.get("id")
-    title = pos.get("title", "").strip()
-    company = pos.get("companyName", pos.get("company_name", "")).strip()
-    if not job_id or not title or not company:
-        return None
-    return RawJob(
-        title=title,
-        company=company,
-        url=JOB_URL.format(job_id=job_id),
-        source="jumpit",
-        location=_parse_location(pos),
-        experience=_parse_experience(pos),
-        employment_type="정규직",
-        raw_text=_parse_raw_text(pos),
-    )
+# jumpit.saramin.co.kr/api/positions returns HTTP 307 → / for all non-browser clients.
+# The site uses Next.js RSC and requires a valid browser session to serve API data.
+# Crawling is not feasible without a headless browser.
 
 
 async def crawl_jumpit() -> List[RawJob]:
-    safe = SafeClient(BASE_URL, min_delay=2.5, max_delay=5.0)
-    all_jobs: List[RawJob] = []
-
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        await safe.setup(client)
-
-        for page in range(1, MAX_PAGES + 1):
-            data = await safe.get(
-                client,
-                API_URL,
-                params={"sort": "rsp_rate", "page": page, "highlight": "false"},
-                extra_headers={"Referer": f"{BASE_URL}/"},
-            )
-
-            if not data:
-                logger.warning(f"점핏 페이지 {page} 응답 없음 → 중단")
-                break
-
-            result = data.get("result", data)
-            positions = result.get("positions", result.get("position", []))
-            if not positions:
-                break
-
-            page_jobs = [j for pos in positions if (j := _to_raw_job(pos))]
-            all_jobs.extend(page_jobs)
-
-            if page == 1:
-                total = result.get("totalCount", result.get("total_count", "?"))
-                logger.info(f"점핏 총 {total}건, 1페이지 {len(page_jobs)}건")
-
-            async with AsyncSessionLocal() as session:
-                if await is_caught_up(session, page_jobs):
-                    break
-
-            if len(positions) < 20:
-                break
-
-    logger.info(f"점핏 수집 완료: {len(all_jobs)}건")
-    if all_jobs:
-        async with AsyncSessionLocal() as session:
-            await upsert_jobs(session, all_jobs)
-
-    return all_jobs
+    logger.warning("점핏 크롤러 비활성화: API가 브라우저 세션 없이는 307 리다이렉트를 반환함")
+    return []
