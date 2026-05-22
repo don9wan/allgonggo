@@ -142,21 +142,32 @@ async def recent_jobs(x_admin_key: str = Header(...), limit: int = 50, source: s
 
 @router.get("/debug/catch")
 async def debug_catch(x_admin_key: str = Header(...)):
-    """캐치 API Railway 환경 접근 테스트."""
+    """캐치 API curl-cffi Chrome 핑거프린트로 접근 테스트."""
     _check_key(x_admin_key)
-    url = "https://www.catch.co.kr/api/v1.0/recruit/information/getRecruitList"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Referer": "https://www.catch.co.kr/NCS/RecruitSearch",
-    }
-    async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-        try:
-            r = await client.get(url, params={"Career": "1", "Sort": "0", "curpage": 1, "pageSize": 5, "onRecruitYN": "Y"}, headers=headers)
-            body = r.text[:500]
-            return {"status": r.status_code, "content_type": r.headers.get("content-type", ""), "body_preview": body}
-        except Exception as e:
-            return {"error": str(e)}
+    result = {"curl_cffi_import": False, "status": None, "content_type": None, "count": None, "error": None}
+    try:
+        from curl_cffi.requests import AsyncSession
+        result["curl_cffi_import"] = True
+    except ImportError as e:
+        result["error"] = f"curl_cffi 미설치: {e}"
+        return result
+    try:
+        async with AsyncSession(impersonate="chrome120") as s:
+            r = await s.get(
+                "https://www.catch.co.kr/api/v1.0/recruit/information/getRecruitList",
+                params={"Career": "1", "Sort": "0", "curpage": 1, "pageSize": 5, "onRecruitYN": "Y"},
+                timeout=15,
+            )
+            result["status"] = r.status_code
+            result["content_type"] = r.headers.get("content-type", "")
+            if r.status_code == 200:
+                data = r.json()
+                result["count"] = len(data.get("recruitData", []))
+            else:
+                result["body_preview"] = r.text[:300]
+    except Exception as e:
+        result["error"] = str(e)
+    return result
 
 
 @router.get("/debug/jumpit")
