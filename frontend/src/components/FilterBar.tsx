@@ -178,7 +178,10 @@ export function FilterBar() {
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (barRef.current && !barRef.current.contains(e.target as Node)) {
+      const target = e.target as Element;
+      // 포털로 렌더링된 패널 내부 클릭은 무시 (옵션 선택 시 닫히지 않도록)
+      if (target.closest(".filter-panel")) return;
+      if (barRef.current && !barRef.current.contains(target)) {
         setOpenKey(null);
       }
     };
