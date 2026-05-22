@@ -1,28 +1,76 @@
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useJobStore } from "../store/jobStore";
 import "./FilterBar.css";
 
-const LOCATIONS = ["서울", "경기", "인천", "부산", "대구", "대전", "광주", "울산", "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주", "재택/원격"];
-const EXPERIENCES = ["신입", "인턴", "경력무관", "1년 이상", "2년 이상", "3년 이상"];
-const EMPLOYMENT_TYPES = ["정규직", "계약직", "인턴"];
-const SOURCES = [
-  { value: "wanted", label: "원티드" },
-  { value: "jumpit", label: "점핏" },
-  { value: "programmers", label: "프로그래머스" },
-  { value: "catch", label: "캐치" },
-  { value: "groupby", label: "그룹바이" },
+const FILTER_CONFIGS = [
+  {
+    key: "location" as const,
+    label: "근무지역",
+    options: [
+      "서울", "경기", "인천", "부산", "대구", "대전",
+      "광주", "울산", "세종", "강원", "충북", "충남",
+      "전북", "전남", "경북", "경남", "제주", "재택/원격",
+    ].map((l) => ({ value: l, label: l })),
+    wide: true,
+  },
+  {
+    key: "experience" as const,
+    label: "경력",
+    options: ["신입", "인턴", "경력무관"].map((e) => ({ value: e, label: e })),
+    wide: false,
+  },
+  {
+    key: "employment_type" as const,
+    label: "고용형태",
+    options: ["정규직", "계약직", "인턴"].map((t) => ({ value: t, label: t })),
+    wide: false,
+  },
+  {
+    key: "source" as const,
+    label: "출처",
+    options: [
+      { value: "wanted", label: "원티드" },
+      { value: "jumpit", label: "점핏" },
+      { value: "catch", label: "캐치" },
+      { value: "groupby", label: "그룹바이" },
+    ],
+    wide: false,
+  },
 ];
 
-function MultiSelect({
+type FilterKey = (typeof FILTER_CONFIGS)[number]["key"];
+
+function FilterDropdown({
   label,
   options,
   selected,
   onChange,
+  isOpen,
+  onToggle,
+  wide,
 }: {
   label: string;
   options: { value: string; label: string }[];
   selected: string[];
   onChange: (v: string[]) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  wide: boolean;
 }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+
+  // 데스크탑에서만 버튼 위치 계산 (모바일은 CSS로 bottom sheet 처리)
+  useEffect(() => {
+    if (isOpen && btnRef.current && window.innerWidth > 767) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPanelPos({ top: rect.bottom + 8, left: rect.left });
+    } else {
+      setPanelPos(null);
+    }
+  }, [isOpen]);
+
   const toggle = (val: string) => {
     if (selected.includes(val)) {
       onChange(selected.filter((v) => v !== val));
@@ -31,62 +79,149 @@ function MultiSelect({
     }
   };
 
+  const hasSelection = selected.length > 0;
+
   return (
-    <div className="filter-group">
-      <span className="filter-group__label">{label}</span>
-      <div className="filter-group__chips">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            className={`filter-chip${selected.includes(opt.value) ? " filter-chip--active" : ""}`}
-            onClick={() => toggle(opt.value)}
+    <div className={`filter-dropdown${isOpen ? " filter-dropdown--open" : ""}`}>
+      <button
+        ref={btnRef}
+        className={`filter-btn${hasSelection ? " filter-btn--active" : ""}`}
+        onClick={onToggle}
+      >
+        <span className="filter-btn__label">{label}</span>
+        {hasSelection && (
+          <span className="filter-btn__count">{selected.length}</span>
+        )}
+        <svg
+          className={`filter-btn__chevron${isOpen ? " filter-btn__chevron--up" : ""}`}
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {isOpen && createPortal(
+        <>
+          <div className="filter-overlay" onClick={onToggle} />
+          <div
+            className={`filter-panel${wide ? " filter-panel--wide" : ""}`}
+            style={
+              panelPos
+                ? { top: panelPos.top, left: panelPos.left }
+                : undefined
+            }
           >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+            <div className="filter-panel__header">
+              <span className="filter-panel__title">{label}</span>
+              {hasSelection && (
+                <button
+                  className="filter-panel__clear"
+                  onClick={() => onChange([])}
+                >
+                  선택 해제
+                </button>
+              )}
+            </div>
+            <div
+              className={`filter-panel__options${wide ? " filter-panel__options--grid" : ""}`}
+            >
+              {options.map((opt) => {
+                const active = selected.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    className={`filter-option${active ? " filter-option--active" : ""}`}
+                    onClick={() => toggle(opt.value)}
+                  >
+                    <span className="filter-option__check">
+                      {active && (
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                        >
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      )}
+                    </span>
+                    <span>{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }
 
 export function FilterBar() {
   const { filters, setFilters, resetFilters } = useJobStore();
+  const [openKey, setOpenKey] = useState<FilterKey | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+
   const hasFilters =
     filters.location.length > 0 ||
     filters.experience.length > 0 ||
     filters.employment_type.length > 0 ||
     filters.source.length > 0;
 
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (barRef.current && !barRef.current.contains(e.target as Node)) {
+        setOpenKey(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenKey(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
+
+  const getSelected = (key: FilterKey): string[] => filters[key];
+
   return (
-    <div className="filter-bar">
+    <div className="filter-bar" ref={barRef}>
       <div className="filter-bar__inner">
-        <MultiSelect
-          label="근무지역"
-          options={LOCATIONS.map((l) => ({ value: l, label: l }))}
-          selected={filters.location}
-          onChange={(v) => setFilters({ location: v })}
-        />
-        <MultiSelect
-          label="경력"
-          options={EXPERIENCES.map((e) => ({ value: e, label: e }))}
-          selected={filters.experience}
-          onChange={(v) => setFilters({ experience: v })}
-        />
-        <MultiSelect
-          label="고용형태"
-          options={EMPLOYMENT_TYPES.map((t) => ({ value: t, label: t }))}
-          selected={filters.employment_type}
-          onChange={(v) => setFilters({ employment_type: v })}
-        />
-        <MultiSelect
-          label="출처"
-          options={SOURCES}
-          selected={filters.source}
-          onChange={(v) => setFilters({ source: v })}
-        />
+        {FILTER_CONFIGS.map((config) => (
+          <FilterDropdown
+            key={config.key}
+            label={config.label}
+            options={config.options}
+            selected={getSelected(config.key)}
+            onChange={(v) => setFilters({ [config.key]: v })}
+            isOpen={openKey === config.key}
+            onToggle={() =>
+              setOpenKey((prev) => (prev === config.key ? null : config.key))
+            }
+            wide={config.wide}
+          />
+        ))}
         {hasFilters && (
-          <button className="filter-reset-btn" onClick={resetFilters}>
-            필터 초기화
+          <button
+            className="filter-reset-btn"
+            onClick={() => {
+              resetFilters();
+              setOpenKey(null);
+            }}
+          >
+            초기화
           </button>
         )}
       </div>

@@ -50,7 +50,7 @@
 
 .navbar__search-input {
   width: 100%;
-  padding: 9px 12px 9px 38px;
+  padding: 9px 34px 9px 38px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-btn);
   font-size: 14px;
@@ -62,6 +62,24 @@
 
 .navbar__search-input:focus {
   border-color: var(--color-accent);
+}
+
+.navbar__search-clear {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-secondary);
+  border-radius: 50%;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.navbar__search-clear:hover {
+  background: var(--color-border);
+  color: var(--color-text-primary);
 }
 
 .navbar__right {
