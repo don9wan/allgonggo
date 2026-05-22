@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import List, Optional
 from app.crawlers.base import RawJob
@@ -89,20 +90,22 @@ def _to_raw_job(pos: dict) -> Optional[RawJob]:
 
 async def crawl_catch() -> List[RawJob]:
     """
-    curl-cffi로 Chrome TLS 핑거프린트를 흉내내 Cloudflare WAF 우회.
+    cloudscraper로 Cloudflare JS 챌린지를 Python에서 직접 실행해 우회.
     """
     try:
-        from curl_cffi.requests import AsyncSession
+        import cloudscraper
     except ImportError:
-        logger.error("curl-cffi 미설치: pip install curl-cffi")
+        logger.error("cloudscraper 미설치: pip install cloudscraper")
         return []
 
-    all_items: List[dict] = []
-
-    async with AsyncSession(impersonate="chrome120") as session:
+    def _fetch_sync() -> List[dict]:
+        scraper = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "mobile": False}
+        )
+        all_items: List[dict] = []
         for page_num in range(1, MAX_PAGES + 1):
             try:
-                resp = await session.get(
+                resp = scraper.get(
                     API_URL,
                     params={
                         "Career": "1",
@@ -111,7 +114,7 @@ async def crawl_catch() -> List[RawJob]:
                         "pageSize": PAGE_SIZE,
                         "onRecruitYN": "Y",
                     },
-                    timeout=15,
+                    timeout=20,
                 )
             except Exception as e:
                 logger.warning(f"캐치 p={page_num} 요청 오류: {e}")
@@ -140,13 +143,9 @@ async def crawl_catch() -> List[RawJob]:
             if len(items) < PAGE_SIZE:
                 break
 
-            page_jobs = [j for item in items if (j := _to_raw_job(item))]
-            try:
-                async with AsyncSessionLocal() as db:
-                    if await is_caught_up(db, page_jobs):
-                        break
-            except Exception:
-                pass
+        return all_items
+
+    all_items = await asyncio.to_thread(_fetch_sync)
 
     jobs: List[RawJob] = [j for item in all_items if (j := _to_raw_job(item))]
 

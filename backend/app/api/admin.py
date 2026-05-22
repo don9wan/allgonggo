@@ -142,29 +142,31 @@ async def recent_jobs(x_admin_key: str = Header(...), limit: int = 50, source: s
 
 @router.get("/debug/catch")
 async def debug_catch(x_admin_key: str = Header(...)):
-    """캐치 API curl-cffi Chrome 핑거프린트로 접근 테스트."""
+    """캐치 API cloudscraper Cloudflare 우회 테스트."""
     _check_key(x_admin_key)
-    result = {"curl_cffi_import": False, "status": None, "content_type": None, "count": None, "error": None}
+    result = {"cloudscraper_import": False, "status": None, "count": None, "error": None}
     try:
-        from curl_cffi.requests import AsyncSession
-        result["curl_cffi_import"] = True
+        import cloudscraper
+        result["cloudscraper_import"] = True
     except ImportError as e:
-        result["error"] = f"curl_cffi 미설치: {e}"
+        result["error"] = f"cloudscraper 미설치: {e}"
         return result
     try:
-        async with AsyncSession(impersonate="chrome120") as s:
-            r = await s.get(
+        def _test():
+            scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
+            r = scraper.get(
                 "https://www.catch.co.kr/api/v1.0/recruit/information/getRecruitList",
                 params={"Career": "1", "Sort": "0", "curpage": 1, "pageSize": 5, "onRecruitYN": "Y"},
-                timeout=15,
+                timeout=20,
             )
-            result["status"] = r.status_code
-            result["content_type"] = r.headers.get("content-type", "")
-            if r.status_code == 200:
-                data = r.json()
-                result["count"] = len(data.get("recruitData", []))
-            else:
-                result["body_preview"] = r.text[:300]
+            return r.status_code, r.text[:300] if r.status_code != 200 else None, r.json() if r.status_code == 200 else None
+        import asyncio
+        status, body, data = await asyncio.to_thread(_test)
+        result["status"] = status
+        if status == 200 and data:
+            result["count"] = len(data.get("recruitData", []))
+        else:
+            result["body_preview"] = body
     except Exception as e:
         result["error"] = str(e)
     return result
