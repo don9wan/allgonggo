@@ -1,47 +1,23 @@
-import asyncio
 import logging
 import httpx
 from typing import List, Optional
 from app.crawlers.base import RawJob
+from app.crawlers.utils import SafeClient
 from app.db.database import AsyncSessionLocal
-from app.crawlers.db_writer import upsert_jobs
+from app.crawlers.db_writer import upsert_jobs, is_caught_up
 
 logger = logging.getLogger(__name__)
 
-WANTED_API_URL = "https://www.wanted.co.kr/api/chaos/jobs/v1/wanted"
-WANTED_JOB_URL = "https://www.wanted.co.kr/wd/{job_id}"
+BASE_URL = "https://www.wanted.co.kr"
+API_URL = f"{BASE_URL}/api/chaos/jobs/v1/wanted"
+JOB_URL = "https://www.wanted.co.kr/wd/{job_id}"
 
-HEADERS = {
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "ko-KR,ko;q=0.9",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    "Wanted-User-Agent": "user-web",
-    "Referer": "https://www.wanted.co.kr/",
-}
-
-CATEGORY_TAGS = [
-    518,   # 개발
-    873,   # 데이터 엔지니어
-    655,   # 프론트엔드
-    660,   # 백엔드
-    876,   # DevOps/인프라
-    872,   # 머신러닝
-    1024,  # 안드로이드
-    1025,  # iOS
-    659,   # 풀스택
-    674,   # 웹 개발자
-    1026,  # 임베디드/시스템
-    900,   # QA
-    671,   # 보안
-    1027,  # 데이터 분석가
-    1037,  # PM
-    10110, # 디자이너
-]
+CATEGORY_TAGS = [518, 873, 655, 660, 876, 872, 1024, 1025, 659, 674]
+MAX_PAGES = 5
 
 
-def _parse_employment_type(position: dict) -> Optional[str]:
-    tags = position.get("tags", [])
-    for tag in tags:
+def _parse_employment_type(pos: dict) -> str:
+    for tag in pos.get("tags", []):
         name = tag.get("title", "")
         if "인턴" in name:
             return "인턴"
@@ -50,109 +26,93 @@ def _parse_employment_type(position: dict) -> Optional[str]:
     return "정규직"
 
 
-def _parse_experience(position: dict) -> str:
-    years_of_experience = position.get("years_of_experience", "")
-    if not years_of_experience:
-        return "경력무관"
-    return str(years_of_experience)
+def _parse_experience(pos: dict) -> str:
+    exp = pos.get("years_of_experience", "")
+    return str(exp) if exp else "경력무관"
 
 
-def _parse_location(position: dict) -> str:
-    address = position.get("address", {})
-    location = address.get("location", "") if address else ""
-    return location or "미정"
+def _parse_location(pos: dict) -> str:
+    addr = pos.get("address") or {}
+    return addr.get("location", "").strip() or "미정"
 
 
-def _parse_raw_text(position: dict) -> str:
+def _parse_raw_text(pos: dict) -> str:
     parts = [
-        position.get("title", ""),
-        position.get("company_name", ""),
-        position.get("address", {}).get("location", "") if position.get("address") else "",
+        pos.get("title", ""),
+        pos.get("company_name", ""),
+        (pos.get("address") or {}).get("location", ""),
+        *[t.get("title", "") for t in pos.get("tags", [])],
     ]
-    tags = position.get("tags", [])
-    for tag in tags:
-        parts.append(tag.get("title", ""))
     return " ".join(filter(None, parts))
 
 
-async def fetch_wanted_jobs(client: httpx.AsyncClient, offset: int = 0) -> dict:
-    params = {
-        "country": "kr",
-        "tag_type_ids": ",".join(str(t) for t in CATEGORY_TAGS[:4]),
-        "limit": 100,
-        "offset": offset,
-        "years_of_experience": "",
-    }
-    try:
-        resp = await client.get(WANTED_API_URL, params=params, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        logger.error(f"원티드 API 요청 실패 (offset={offset}): {e}")
-        return {}
+def _to_raw_job(pos: dict) -> Optional[RawJob]:
+    job_id = pos.get("id")
+    title = pos.get("title", "").strip()
+    company = pos.get("company_name", "").strip()
+    if not job_id or not title or not company:
+        return None
+    return RawJob(
+        title=title,
+        company=company,
+        url=JOB_URL.format(job_id=job_id),
+        source="wanted",
+        location=_parse_location(pos),
+        experience=_parse_experience(pos),
+        employment_type=_parse_employment_type(pos),
+        raw_text=_parse_raw_text(pos),
+    )
 
 
 async def crawl_wanted() -> List[RawJob]:
-    raw_jobs: List[RawJob] = []
+    safe = SafeClient(BASE_URL, min_delay=2.0, max_delay=5.0)
+    all_jobs: List[RawJob] = []
 
-    async with httpx.AsyncClient() as client:
-        data = await fetch_wanted_jobs(client, offset=0)
-        if not data:
-            return raw_jobs
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        await safe.setup(client)
 
-        positions = data.get("data", [])
-        total = data.get("total", 0)
-        logger.info(f"원티드 총 공고 수: {total}, 이번 배치: {len(positions)}")
+        extra = {"Referer": f"{BASE_URL}/", "Wanted-User-Agent": "user-web"}
 
-        for pos in positions:
-            try:
-                job_id = pos.get("id")
-                if not job_id:
-                    continue
-                raw_jobs.append(RawJob(
-                    title=pos.get("title", "").strip(),
-                    company=pos.get("company_name", "").strip(),
-                    url=WANTED_JOB_URL.format(job_id=job_id),
-                    source="wanted",
-                    location=_parse_location(pos),
-                    experience=_parse_experience(pos),
-                    employment_type=_parse_employment_type(pos),
-                    raw_text=_parse_raw_text(pos),
-                ))
-            except Exception as e:
-                logger.warning(f"공고 파싱 오류: {e}")
-                continue
+        for page in range(MAX_PAGES):
+            offset = page * 100
+            data = await safe.get(
+                client,
+                API_URL,
+                params={
+                    "country": "kr",
+                    "tag_type_ids": ",".join(str(t) for t in CATEGORY_TAGS),
+                    "limit": 100,
+                    "offset": offset,
+                },
+                extra_headers=extra,
+            )
 
-        await asyncio.sleep(1)
+            if not data:
+                logger.warning(f"원티드 페이지 {page+1} 응답 없음 → 중단")
+                break
 
-        if total > 100:
-            batches = min((total // 100), 4)
-            for i in range(1, batches + 1):
-                batch = await fetch_wanted_jobs(client, offset=i * 100)
-                for pos in batch.get("data", []):
-                    try:
-                        job_id = pos.get("id")
-                        if not job_id:
-                            continue
-                        raw_jobs.append(RawJob(
-                            title=pos.get("title", "").strip(),
-                            company=pos.get("company_name", "").strip(),
-                            url=WANTED_JOB_URL.format(job_id=job_id),
-                            source="wanted",
-                            location=_parse_location(pos),
-                            experience=_parse_experience(pos),
-                            employment_type=_parse_employment_type(pos),
-                            raw_text=_parse_raw_text(pos),
-                        ))
-                    except Exception as e:
-                        logger.warning(f"공고 파싱 오류: {e}")
-                        continue
-                await asyncio.sleep(1)
+            positions = data.get("data", [])
+            if not positions:
+                break
 
-    logger.info(f"원티드 수집 완료: {len(raw_jobs)}건")
+            page_jobs = [j for pos in positions if (j := _to_raw_job(pos))]
+            all_jobs.extend(page_jobs)
 
-    if raw_jobs:
+            if page == 0:
+                total = data.get("total", 0)
+                logger.info(f"원티드 총 {total}건, 1페이지 {len(page_jobs)}건")
+
+            # 이전 크롤링 시점까지 따라잡았는지 확인
+            async with AsyncSessionLocal() as session:
+                if await is_caught_up(session, page_jobs):
+                    break
+
+            if len(positions) < 100:
+                break
+
+    logger.info(f"원티드 수집 완료: {len(all_jobs)}건")
+    if all_jobs:
         async with AsyncSessionLocal() as session:
-            await upsert_jobs(session, raw_jobs)
+            await upsert_jobs(session, all_jobs)
 
-    return raw_jobs
+    return all_jobs
