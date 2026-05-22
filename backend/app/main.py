@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,12 +6,20 @@ from app.core.config import settings
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.api import jobs
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    start_scheduler()
+    try:
+        start_scheduler()
+    except Exception as e:
+        logger.error(f"스케줄러 시작 실패: {e}")
     yield
-    stop_scheduler()
+    try:
+        stop_scheduler()
+    except Exception:
+        pass
 
 
 app = FastAPI(
@@ -34,3 +43,16 @@ app.include_router(jobs.router, prefix="/api")
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+async def health_db():
+    """DB 연결 상태 확인 (디버깅용)."""
+    from sqlalchemy import text
+    from app.db.database import AsyncSessionLocal
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        return {"status": "ok", "db": "connected"}
+    except Exception as e:
+        return {"status": "error", "db": str(e)}
