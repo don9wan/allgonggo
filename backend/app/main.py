@@ -9,8 +9,20 @@ from app.api import jobs
 logger = logging.getLogger(__name__)
 
 
+def run_migrations():
+    try:
+        from alembic.config import Config
+        from alembic import command
+        cfg = Config("alembic.ini")
+        command.upgrade(cfg, "head")
+        logger.info("DB 마이그레이션 완료")
+    except Exception as e:
+        logger.error(f"DB 마이그레이션 실패 (앱은 계속 실행): {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    run_migrations()
     try:
         start_scheduler()
     except Exception as e:
@@ -47,7 +59,6 @@ async def health():
 
 @app.get("/health/db")
 async def health_db():
-    """DB 연결 상태 확인 (디버깅용)."""
     from sqlalchemy import text
     from app.db.database import AsyncSessionLocal
     try:
