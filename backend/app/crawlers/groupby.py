@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import List, Optional
 from app.crawlers.base import RawJob
@@ -16,7 +15,6 @@ MAX_BATCHES = 20  # 최대 400건
 
 ENTRY_CAREER_TYPES = {"신입", "무관", "인턴"}
 
-# positionTypes[].id 기준 IT 직군 (base-info API 확인)
 IT_POSITION_TYPE_IDS = {
     1,   # 프론트엔드
     2,   # 백엔드
@@ -103,57 +101,43 @@ def _to_raw_job(pos: dict) -> Optional[RawJob]:
 
 async def crawl_groupby() -> List[RawJob]:
     """
-    groupby.kr을 Playwright로 열어 CORS 세션 확보 후
-    page.evaluate()로 api.groupby.kr을 직접 호출 (origin: groupby.kr → CORS 허용).
+    curl-cffi로 Chrome TLS 핑거프린트를 흉내내 api.groupby.kr 직접 호출.
     """
     try:
-        from playwright.async_api import async_playwright
+        from curl_cffi.requests import AsyncSession
     except ImportError:
-        logger.error("playwright 미설치: pip install playwright && playwright install chromium")
+        logger.error("curl-cffi 미설치: pip install curl-cffi")
         return []
 
     all_items: List[dict] = []
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"],
-        )
-        ctx = await browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            locale="ko-KR",
-        )
-        page = await ctx.new_page()
-
-        try:
-            await page.goto(f"{BASE_URL}/positions", wait_until="networkidle", timeout=20000)
-            await asyncio.sleep(2)
-        except Exception as e:
-            logger.error(f"그룹바이 메인 페이지 로드 실패: {e}")
-            await browser.close()
-            return []
-
-        seen_ids: set = set()
-
+    async with AsyncSession(impersonate="chrome120") as session:
         for batch in range(MAX_BATCHES):
             offset = batch * BATCH_SIZE
             try:
-                result = await page.evaluate(f"""
-                async () => {{
-                    const resp = await fetch(
-                        '{API_BASE}/startup-positions?isAdvertising=false&limit={BATCH_SIZE}&offset={offset}&orderBy=-updatedAt',
-                        {{ headers: {{ Accept: 'application/json' }} }}
-                    );
-                    if (!resp.ok) return null;
-                    return await resp.json();
-                }}
-                """)
+                resp = await session.get(
+                    f"{API_BASE}/startup-positions",
+                    params={
+                        "isAdvertising": "false",
+                        "limit": BATCH_SIZE,
+                        "offset": offset,
+                        "orderBy": "-updatedAt",
+                    },
+                    headers={"Accept": "application/json", "Origin": "https://groupby.kr", "Referer": "https://groupby.kr/"},
+                    timeout=15,
+                )
             except Exception as e:
-                logger.warning(f"그룹바이 batch={batch} evaluate 오류: {e}")
+                logger.warning(f"그룹바이 batch={batch} 요청 오류: {e}")
                 break
 
-            if not result or not isinstance(result, dict):
-                logger.warning(f"그룹바이 batch={batch} 응답 없음")
+            if resp.status_code != 200:
+                logger.warning(f"그룹바이 batch={batch} HTTP {resp.status_code}")
+                break
+
+            try:
+                result = resp.json()
+            except Exception as e:
+                logger.warning(f"그룹바이 batch={batch} JSON 파싱 오류: {e}")
                 break
 
             data = result.get("data") or {}
@@ -165,32 +149,24 @@ async def crawl_groupby() -> List[RawJob]:
             if batch == 0:
                 logger.info(f"그룹바이 API 연결 성공, 수집 시작")
 
-            new_items = []
-            for item in items:
-                item_id = item.get("id")
-                if item_id and item_id not in seen_ids:
-                    seen_ids.add(item_id)
-                    new_items.append(item)
-            all_items.extend(new_items)
+            all_items.extend(items)
 
             if len(items) < BATCH_SIZE:
                 break
 
-            page_jobs = [j for item in new_items if (j := _to_raw_job(item))]
+            page_jobs = [j for item in items if (j := _to_raw_job(item))]
             try:
-                async with AsyncSessionLocal() as session:
-                    if await is_caught_up(session, page_jobs):
+                async with AsyncSessionLocal() as db:
+                    if await is_caught_up(db, page_jobs):
                         break
             except Exception:
                 pass
-
-        await browser.close()
 
     jobs: List[RawJob] = [j for item in all_items if (j := _to_raw_job(item))]
 
     logger.info(f"그룹바이 수집 완료: {len(jobs)}건 (신입/인턴/경력무관 IT)")
     if jobs:
-        async with AsyncSessionLocal() as session:
-            await upsert_jobs(session, jobs)
+        async with AsyncSessionLocal() as db:
+            await upsert_jobs(db, jobs)
 
     return jobs
