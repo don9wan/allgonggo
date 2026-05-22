@@ -22,6 +22,21 @@ export async function triggerWanted(key: string) {
   return data;
 }
 
+export async function triggerJumpit(key: string) {
+  const { data } = await client.post("/admin/crawl/jumpit", null, { headers: headers(key) });
+  return data;
+}
+
+export async function triggerCatch(key: string) {
+  const { data } = await client.post("/admin/crawl/catch", null, { headers: headers(key) });
+  return data;
+}
+
+export async function triggerGroupby(key: string) {
+  const { data } = await client.post("/admin/crawl/groupby", null, { headers: headers(key) });
+  return data;
+}
+
 export async function getRecentJobs(key: string, limit = 30, source?: string) {
   const params: Record<string, string | number> = { limit };
   if (source) params.source = source;

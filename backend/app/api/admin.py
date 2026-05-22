@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 
 CRAWLER_STATUS = {
     "wanted": {"active": True, "note": "API v4 정상 동작 (신입/IT 필터 적용)"},
-    "jumpit": {"active": False, "note": "API 307 리다이렉트 (브라우저 세션 필요)"},
+    "jumpit": {"active": True, "note": "jumpit-api.saramin.co.kr 직접 호출 가능"},
     "programmers": {"active": False, "note": "career.programmers.co.kr 도메인 없음 (NXDOMAIN)"},
-    "catch": {"active": False, "note": "Cloudflare WAF 차단 (403)"},
-    "groupby": {"active": False, "note": "공개 JSON API 없음 (Next.js SSR)"},
+    "catch": {"active": True, "note": "API 직접 호출 가능 (Career=1 신입 필터)"},
+    "groupby": {"active": True, "note": "Playwright 브라우저 응답 캡처 방식"},
 }
 
 
@@ -75,6 +75,33 @@ async def trigger_wanted(x_admin_key: str = Header(...)):
     _check_key(x_admin_key)
     from app.crawlers.wanted import crawl_wanted
     jobs = await crawl_wanted()
+    return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
+
+
+@router.post("/crawl/jumpit")
+async def trigger_jumpit(x_admin_key: str = Header(...)):
+    """점핏만 즉시 크롤링 (결과 반환)."""
+    _check_key(x_admin_key)
+    from app.crawlers.jumpit import crawl_jumpit
+    jobs = await crawl_jumpit()
+    return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
+
+
+@router.post("/crawl/catch")
+async def trigger_catch(x_admin_key: str = Header(...)):
+    """캐치만 즉시 크롤링 (결과 반환)."""
+    _check_key(x_admin_key)
+    from app.crawlers.catch import crawl_catch
+    jobs = await crawl_catch()
+    return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
+
+
+@router.post("/crawl/groupby")
+async def trigger_groupby(x_admin_key: str = Header(...)):
+    """그룹바이만 즉시 크롤링 (Playwright, 결과 반환)."""
+    _check_key(x_admin_key)
+    from app.crawlers.groupby import crawl_groupby
+    jobs = await crawl_groupby()
     return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
 
 

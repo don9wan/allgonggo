@@ -109,9 +109,12 @@ async def crawl_wanted() -> List[RawJob]:
             if page == 0:
                 logger.info(f"원티드 1페이지 {len(page_jobs)}건 수집")
 
-            async with AsyncSessionLocal() as session:
-                if await is_caught_up(session, page_jobs):
-                    break
+            try:
+                async with AsyncSessionLocal() as session:
+                    if await is_caught_up(session, page_jobs):
+                        break
+            except Exception:
+                pass  # DB 없는 환경에서도 계속 수집
 
             if not data.get("links", {}).get("next"):
                 break

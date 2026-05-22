@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getStatus, triggerCrawl, triggerWanted, getRecentJobs, debugWanted } from "../api/admin";
+import { getStatus, triggerCrawl, triggerWanted, triggerJumpit, triggerCatch, triggerGroupby, getRecentJobs, debugWanted } from "../api/admin";
 import "./AdminPage.css";
 
 type Status = {
@@ -80,11 +80,27 @@ export function AdminPage() {
     try {
       const result = await triggerWanted(key);
       setLastCrawl(new Date().toLocaleTimeString("ko-KR"));
-      alert(`원티드 크롤링 완료: ${result.count}건\n샘플: ${result.sample?.map((j: Job) => j.title).join(", ") || "-"}`);
+      alert(`원티드 크롤링 완료: ${result.count}건\n샘플: ${result.sample?.map((j: { title: string }) => j.title).join(", ") || "-"}`);
       load(key);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(`원티드 크롤링 실패: ${msg}`);
+    } finally {
+      setCrawling(false);
+    }
+  };
+
+  const handleCrawlSingle = async (name: string, fn: () => Promise<{ count: number; sample: { title: string }[] }>) => {
+    setCrawling(true);
+    setError("");
+    try {
+      const result = await fn();
+      setLastCrawl(new Date().toLocaleTimeString("ko-KR"));
+      alert(`${name} 크롤링 완료: ${result.count}건\n샘플: ${result.sample?.map((j) => j.title).join(", ") || "-"}`);
+      load(key);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(`${name} 크롤링 실패: ${msg}`);
     } finally {
       setCrawling(false);
     }
@@ -170,8 +186,19 @@ export function AdminPage() {
             <button className="btn-primary" onClick={handleCrawlAll} disabled={crawling}>
               {crawling ? "실행 중..." : "전체 크롤링"}
             </button>
+          </div>
+          <div className="btn-group">
             <button className="btn-secondary" onClick={handleCrawlWanted} disabled={crawling}>
-              원티드만 (즉시)
+              원티드
+            </button>
+            <button className="btn-secondary" onClick={() => handleCrawlSingle("점핏", () => triggerJumpit(key))} disabled={crawling}>
+              점핏
+            </button>
+            <button className="btn-secondary" onClick={() => handleCrawlSingle("캐치", () => triggerCatch(key))} disabled={crawling}>
+              캐치
+            </button>
+            <button className="btn-secondary" onClick={() => handleCrawlSingle("그룹바이", () => triggerGroupby(key))} disabled={crawling}>
+              그룹바이
             </button>
           </div>
           <button className="btn-sm" onClick={handleDebugWanted}>원티드 API 디버그</button>
