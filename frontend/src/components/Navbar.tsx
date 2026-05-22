@@ -11,7 +11,7 @@ interface Props {
 export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
   const { savedJobs, hideViewed, toggleHideViewed } = useJobStore();
   const [inputValue, setInputValue] = useState(searchValue);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 외부(필터 초기화 등)에서 searchValue 변경 시 동기화
   useEffect(() => {
