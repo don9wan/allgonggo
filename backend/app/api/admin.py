@@ -45,30 +45,28 @@ async def debug_wanted(x_admin_key: str = Header(...)):
     """원티드 API 후보 URL들을 모두 시도해서 작동하는 것 찾기."""
     _check_key(x_admin_key)
 
-    candidates = [
-        ("v1", "https://www.wanted.co.kr/api/chaos/jobs/v1/wanted", {"country": "kr", "tag_type_ids": "518", "limit": 5, "offset": 0}),
-        ("v2", "https://www.wanted.co.kr/api/chaos/jobs/v2/wanted", {"country": "kr", "tag_type_ids": "518", "limit": 5, "offset": 0}),
-        ("v4", "https://www.wanted.co.kr/api/v4/jobs", {"country": "kr", "job_sort": "job.latest_order", "years": -1, "locations": "all", "limit": 5}),
-        ("list", "https://www.wanted.co.kr/api/chaos/jobs/v1/job-positions", {"country": "kr", "limit": 5, "offset": 0}),
-    ]
     headers = {
         "Accept": "application/json",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
         "Referer": "https://www.wanted.co.kr/",
         "Wanted-User-Agent": "user-web",
     }
-    results = {}
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        for name, url, params in candidates:
-            try:
-                resp = await client.get(url, params=params, headers=headers, timeout=10)
-                results[name] = {
-                    "status": resp.status_code,
-                    "preview": resp.text[:300],
-                }
-            except Exception as e:
-                results[name] = {"error": str(e)}
-    return results
+        resp = await client.get(
+            "https://www.wanted.co.kr/api/v4/jobs",
+            params={"country": "kr", "job_sort": "job.latest_order", "years": -1, "locations": "all", "limit": 3},
+            headers=headers,
+            timeout=10,
+        )
+        data = resp.json()
+        jobs = data.get("data", [])
+        return {
+            "status": resp.status_code,
+            "total": data.get("total", "?"),
+            "links": data.get("links"),
+            "first_job_keys": list(jobs[0].keys()) if jobs else [],
+            "first_job": jobs[0] if jobs else {},
+        }
 
 
 @router.get("/debug/db")
