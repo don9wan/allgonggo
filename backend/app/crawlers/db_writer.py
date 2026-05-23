@@ -88,6 +88,15 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
                     break
 
             if matched_job:
+                # 같은 소스가 이미 이 job에 연결돼 있으면 스킵 (아이콘 중복 방지)
+                dup_result = await session.execute(
+                    select(JobSource.id).where(
+                        JobSource.job_id == matched_job.id,
+                        JobSource.source == raw.source,
+                    )
+                )
+                if dup_result.scalar_one_or_none():
+                    continue
                 session.add(JobSource(
                     job_id=matched_job.id,
                     source=raw.source,
