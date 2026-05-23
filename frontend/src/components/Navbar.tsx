@@ -52,10 +52,10 @@ export function Navbar({ onOpenSaved, onOpenHidden, searchValue, onSearchChange 
     <nav className="navbar">
       <div className="navbar__inner">
         <div className="navbar__left">
-          <div className="navbar__logo">
+          <button className="navbar__logo" onClick={() => window.location.reload()}>
             <img className="navbar__logo-icon" src={logoSrc} alt="올공고 로고" width="18" height="18" />
             <span className="navbar__logo-text">올공고</span>
-          </div>
+          </button>
         </div>
 
         <div className="navbar__center">
