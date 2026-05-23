@@ -49,16 +49,11 @@
 }
 
 .job-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
   margin-bottom: 10px;
 }
 
 .job-card--small .job-card__header {
   margin-bottom: 6px;
-  align-items: center;
 }
 
 .job-card__company {
@@ -73,6 +68,14 @@
   font-weight: 600;
   color: var(--color-text-primary);
   line-height: 1.4;
+}
+
+.job-card__footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .job-card__actions {
