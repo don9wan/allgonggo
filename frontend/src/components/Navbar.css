@@ -165,4 +165,13 @@
     padding: 10px 16px;
     gap: 10px;
   }
+
+  .navbar__search-input {
+    font-size: 16px; /* iOS 자동 줌인 방지 (16px 미만이면 확대됨) */
+    padding-left: 44px;
+  }
+
+  .navbar__search-icon {
+    left: 14px;
+  }
 }
