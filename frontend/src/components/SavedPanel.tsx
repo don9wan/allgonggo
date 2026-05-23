@@ -93,7 +93,7 @@ function SavedCard({ job, onReturn }: SavedCardProps) {
           className="saved-card__btn saved-card__btn--return"
           onClick={() => onReturn(job)}
         >
-          되돌리기
+          저장 취소
         </button>
       </div>
     </div>

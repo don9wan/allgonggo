@@ -18,7 +18,7 @@ export interface Job {
 
 export interface JobListResponse {
   jobs: Job[];
-  total: number;
+  total: number | null;
   page: number;
   size: number;
   has_next: boolean;

@@ -28,7 +28,7 @@ class JobOut(BaseModel):
 
 class JobListResponse(BaseModel):
     jobs: List[JobOut]
-    total: int
+    total: Optional[int] = None  # page 1에만 반환, 이후 페이지는 None
     page: int
     size: int
     has_next: bool

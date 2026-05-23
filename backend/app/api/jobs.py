@@ -58,11 +58,15 @@ async def list_jobs(
             subq = select(JobSource.job_id).where(JobSource.source.in_(sources)).distinct()
             base_query = base_query.where(Job.id.in_(subq))
 
-    count_query = select(func.count()).select_from(base_query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar_one()
-
     offset = (page - 1) * size
+
+    # COUNT는 첫 페이지에만 실행 (이후 페이지는 불필요)
+    if page == 1:
+        count_query = select(func.count()).select_from(base_query.subquery())
+        total_result = await db.execute(count_query)
+        total: int | None = total_result.scalar_one()
+    else:
+        total = None
     jobs_query = (
         base_query
         .order_by(Job.crawled_at.desc())

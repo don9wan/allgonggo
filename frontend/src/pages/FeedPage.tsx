@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchJobs } from "../api/jobs";
 import { JobCard, JobCardSkeleton } from "../components/JobCard";
 import { useJobStore } from "../store/jobStore";
@@ -15,49 +15,35 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
   const { filters, viewedIds, lastSeenId, hideViewed, savedJobs, saveJob } = useJobStore();
   const savedIds = new Set(savedJobs.map((j) => j.id));
 
-  const [page, setPage] = useState(1);
-  const [allJobs, setAllJobs] = useState<Job[]>([]);
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  const { data, isFetching, isError } = useQuery({
-    queryKey: ["jobs", filters, page],
-    queryFn: () => fetchJobs(filters, page, 20),
-    placeholderData: (prev) => prev,
-    retry: 2,
-    retryDelay: 1500,
-  });
+  const { data, isFetching, isFetchingNextPage, fetchNextPage, hasNextPage, isError } =
+    useInfiniteQuery({
+      queryKey: ["jobs", filters],
+      queryFn: ({ pageParam }) => fetchJobs(filters, pageParam as number, 20),
+      initialPageParam: 1,
+      getNextPageParam: (lastPage) =>
+        lastPage.has_next ? lastPage.page + 1 : undefined,
+      retry: 2,
+      retryDelay: 1500,
+    });
 
-  useEffect(() => {
-    setPage(1);
-    setAllJobs([]);
-  }, [filters]);
-
-  useEffect(() => {
-    if (data?.jobs) {
-      if (page === 1) {
-        setAllJobs(data.jobs);
-      } else {
-        setAllJobs((prev) => {
-          const existingIds = new Set(prev.map((j) => j.id));
-          const newJobs = data.jobs.filter((j) => !existingIds.has(j.id));
-          return [...prev, ...newJobs];
-        });
-      }
-    }
-  }, [data, page]);
+  const allJobs: Job[] = data?.pages.flatMap((p) => p.jobs) ?? [];
+  const total = data?.pages[0]?.total ?? null;
+  const isInitialLoading = isFetching && allJobs.length === 0;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && data?.has_next && !isFetching) {
-          setPage((p) => p + 1);
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
         }
       },
       { threshold: 0.1 }
     );
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [data?.has_next, isFetching]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const displayJobs = useMemo(() => {
     let jobs = allJobs.filter((j) => !savedIds.has(j.id));
@@ -91,8 +77,8 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
   return (
     <main className="feed-page">
       <div className="feed-page__inner">
-        {data?.total !== undefined && (
-          <p className="feed-page__count">최근 2주 내 올라온 공고 {data.total.toLocaleString()}건</p>
+        {total !== null && (
+          <p className="feed-page__count">최근 2주 내 올라온 공고 {total.toLocaleString()}건</p>
         )}
 
         {isError && (
@@ -106,18 +92,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
           </div>
         )}
 
-        {!isError && displayJobs.length === 0 && !isFetching && (
-          <div className="feed-page__empty">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-            <p>공고를 찾을 수 없습니다</p>
-            <span>검색어나 필터를 조정해보세요</span>
-          </div>
-        )}
-
-        {isFetching && allJobs.length === 0 ? (
+        {isInitialLoading ? (
           <div className="feed-page__list">
             {Array.from({ length: 5 }).map((_, i) => (
               <JobCardSkeleton key={i} />
@@ -125,6 +100,16 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
           </div>
         ) : (
           <div className="feed-page__list">
+            {!isError && displayJobs.length === 0 && !isFetching && (
+              <div className="feed-page__empty">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <p>공고를 찾을 수 없습니다</p>
+                <span>검색어나 필터를 조정해보세요</span>
+              </div>
+            )}
             {displayJobs.map((job) => {
               const status = getStatus(job);
               return (
@@ -140,7 +125,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
           </div>
         )}
 
-        {isFetching && allJobs.length > 0 && (
+        {isFetchingNextPage && (
           <div className="feed-page__spinner">
             <div className="spinner" />
           </div>
