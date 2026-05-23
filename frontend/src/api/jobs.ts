@@ -24,10 +24,6 @@ export async function fetchJobs(
   if (filters.employment_type?.length) params.employment_type = filters.employment_type.join(",");
   if (filters.source?.length) params.source = filters.source.join(",");
 
-  try {
-    const { data } = await client.get<JobListResponse>("/jobs", { params });
-    return data;
-  } catch {
-    return { jobs: [], total: 0, page, size, has_next: false };
-  }
+  const { data } = await client.get<JobListResponse>("/jobs", { params });
+  return data;
 }

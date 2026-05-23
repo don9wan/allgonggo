@@ -19,10 +19,12 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError } = useQuery({
     queryKey: ["jobs", filters, page],
     queryFn: () => fetchJobs(filters, page, 20),
     placeholderData: (prev) => prev,
+    retry: 2,
+    retryDelay: 1500,
   });
 
   useEffect(() => {
@@ -93,7 +95,18 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
           <p className="feed-page__count">공고 {data.total.toLocaleString()}건</p>
         )}
 
-        {displayJobs.length === 0 && !isFetching && (
+        {isError && (
+          <div className="feed-page__empty">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4m0 4h.01" />
+            </svg>
+            <p>서버에 연결할 수 없습니다</p>
+            <span>잠시 후 다시 시도해주세요</span>
+          </div>
+        )}
+
+        {!isError && displayJobs.length === 0 && !isFetching && (
           <div className="feed-page__empty">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <circle cx="11" cy="11" r="8" />
