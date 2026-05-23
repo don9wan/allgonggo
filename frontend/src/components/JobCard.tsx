@@ -44,7 +44,6 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
 
   const isViewed = status === "viewed" || status === "last_seen";
   const isSmall = isViewed;
-  const showActions = !isSmall || isLastSeen;
 
   const borderColor = (() => {
     if (isLastSeen) return "var(--color-state-last-seen)";
@@ -52,18 +51,27 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
     return "var(--color-border)";
   })();
 
-  const handleSourceClick = (url: string) => {
+  const handleCardClick = () => {
+    if (job.sources.length === 0) return;
+    window.open(job.sources[0].url, "_blank", "noopener,noreferrer");
+    markViewed(job.id);
+  };
+
+  const handleSourceClick = (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
     window.open(url, "_blank", "noopener,noreferrer");
     markViewed(job.id);
   };
 
-  const handleSave = () => {
+  const handleSave = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!onSave) return;
     setExiting(true);
     setTimeout(() => onSave(job), 300);
   };
 
-  const handleHide = () => {
+  const handleHide = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setExiting(true);
     setTimeout(() => hideJob(job), 300);
   };
@@ -73,31 +81,30 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
       className={`job-card${isSmall ? " job-card--small" : ""}${exiting ? " job-card--exit" : ""}`}
       style={{ borderColor }}
       data-id={job.id}
+      onClick={handleCardClick}
     >
       <div className="job-card__header">
         <div className="job-card__text">
           <p className="job-card__company">{job.company}</p>
           <h3 className="job-card__title">{job.title}</h3>
         </div>
-        {showActions && (
-          <div className="job-card__actions">
-            {onSave && (
-              <button className="job-card__save-btn" onClick={handleSave} title="저장">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-              </button>
-            )}
-            <button className="job-card__hide-btn" onClick={handleHide} title="안 보기">
+        <div className="job-card__actions">
+          {onSave && (
+            <button className="job-card__save-btn" onClick={handleSave} title="저장">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                <path d="M10 11v6M14 11v6" />
-                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
               </svg>
             </button>
-          </div>
-        )}
+          )}
+          <button className="job-card__hide-btn" onClick={handleHide} title="안 보기">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {!isSmall && (
@@ -114,7 +121,7 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
             <button
               key={src.id}
               className="job-card__source-btn"
-              onClick={() => handleSourceClick(src.url)}
+              onClick={(e) => handleSourceClick(e, src.url)}
               title={SOURCE_LABELS[src.source] || src.source}
             >
               <img
