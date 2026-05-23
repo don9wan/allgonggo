@@ -12,6 +12,15 @@ export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
   const { savedJobs, hideViewed, toggleHideViewed } = useJobStore();
   const [inputValue, setInputValue] = useState(searchValue);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 767);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // 외부(필터 초기화 등)에서 searchValue 변경 시 동기화
   useEffect(() => {
@@ -70,7 +79,7 @@ export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
             <input
               type="text"
               className="navbar__search-input"
-              placeholder="직무명, 회사명, 기술스택"
+              placeholder={isMobile ? "직무 키워드 검색" : "찾으시는 직무 키워드를 입력해보세요"}
               value={inputValue}
               onChange={handleChange}
             />

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta, timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -28,6 +29,20 @@ async def run_all_crawlers():
             logger.error(f"{name} 크롤링 실패: {e}")
 
 
+async def delete_old_jobs():
+    from sqlalchemy import delete
+    from app.db.database import AsyncSessionLocal
+    from app.models.job import Job
+
+    cutoff = datetime.now(timezone.utc) - timedelta(weeks=2)
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            delete(Job).where(Job.crawled_at < cutoff)
+        )
+        await session.commit()
+        logger.info(f"2주 이상 된 공고 {result.rowcount}건 삭제")
+
+
 def start_scheduler():
     for hour in [10, 12, 14, 16, 18]:
         scheduler.add_job(
@@ -36,8 +51,14 @@ def start_scheduler():
             id=f"crawl_{hour}",
             replace_existing=True,
         )
+    scheduler.add_job(
+        delete_old_jobs,
+        trigger=CronTrigger(hour=3, minute=0, timezone="Asia/Seoul"),
+        id="delete_old_jobs",
+        replace_existing=True,
+    )
     scheduler.start()
-    logger.info("스케줄러 시작됨 (10:00 / 12:00 / 14:00 / 16:00 / 18:00 KST)")
+    logger.info("스케줄러 시작됨 (크롤링: 10~18시 짝수, 공고 삭제: 매일 03:00 KST)")
 
 
 def stop_scheduler():
