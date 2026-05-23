@@ -2,6 +2,18 @@ import { useState } from "react";
 import type { Job, CardStatus } from "../types/job";
 import { useJobStore } from "../store/jobStore";
 
+export function JobCardSkeleton() {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton-line skeleton-card__company" />
+      <div className="skeleton-line skeleton-card__title" />
+      <div className="skeleton-line skeleton-card__title-sm" />
+      <div className="skeleton-line skeleton-card__meta" />
+      <div className="skeleton-line skeleton-card__icon" />
+    </div>
+  );
+}
+
 interface Props {
   job: Job;
   status: CardStatus;

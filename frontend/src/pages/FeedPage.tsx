@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchJobs } from "../api/jobs";
-import { JobCard } from "../components/JobCard";
+import { JobCard, JobCardSkeleton } from "../components/JobCard";
 import { useJobStore } from "../store/jobStore";
 import type { Job, CardStatus, SavedJob } from "../types/job";
 import "./FeedPage.css";
@@ -117,22 +117,30 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
           </div>
         )}
 
-        <div className="feed-page__list">
-          {displayJobs.map((job) => {
-            const status = getStatus(job);
-            return (
-              <JobCard
-                key={job.id}
-                job={job}
-                status={status}
-                isLastSeen={job.id === lastSeenId}
-                onSave={handleSave}
-              />
-            );
-          })}
-        </div>
+        {isFetching && allJobs.length === 0 ? (
+          <div className="feed-page__list">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <JobCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="feed-page__list">
+            {displayJobs.map((job) => {
+              const status = getStatus(job);
+              return (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  status={status}
+                  isLastSeen={job.id === lastSeenId}
+                  onSave={handleSave}
+                />
+              );
+            })}
+          </div>
+        )}
 
-        {isFetching && (
+        {isFetching && allJobs.length > 0 && (
           <div className="feed-page__spinner">
             <div className="spinner" />
           </div>

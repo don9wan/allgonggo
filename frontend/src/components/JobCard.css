@@ -162,3 +162,35 @@
   background: rgba(156, 163, 175, 0.12);
   color: var(--color-state-viewed);
 }
+
+/* ─── 스켈레톤 shimmer ───────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position:  400px 0; }
+}
+
+.skeleton-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.skeleton-line {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 25%,
+    #f3f4f6 50%,
+    var(--color-border) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton-card__company  { height: 13px; width: 72px; margin-bottom: 10px; }
+.skeleton-card__title    { height: 18px; width: 60%; margin-bottom: 6px; }
+.skeleton-card__title-sm { height: 18px; width: 40%; margin-bottom: 14px; }
+.skeleton-card__meta     { height: 13px; width: 45%; margin-bottom: 18px; }
+.skeleton-card__icon     { width: 28px; height: 28px; border-radius: 6px; }
