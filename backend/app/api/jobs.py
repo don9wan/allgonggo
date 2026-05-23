@@ -85,7 +85,7 @@ async def list_jobs(
         total=total,
         page=page,
         size=size,
-        has_next=(offset + size) < total,
+        has_next=len(jobs) == size,
     )
 
 
