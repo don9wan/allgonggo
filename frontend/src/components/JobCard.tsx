@@ -115,8 +115,7 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
                 />
-                {isSmall && <span className="job-card__source-label">{SOURCE_LABELS[src.source]}</span>}
-              </button>
+                </button>
             ))}
           </div>
           {isLastSeen && (

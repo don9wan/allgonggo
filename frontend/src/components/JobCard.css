@@ -154,10 +154,6 @@
   background: white;
 }
 
-.job-card__source-label {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
 
 .job-card__tag {
   font-size: 12px;
@@ -176,6 +172,41 @@
 .job-card__tag--viewed {
   background: rgba(156, 163, 175, 0.12);
   color: var(--color-state-viewed);
+}
+
+/* ─── 모바일 ─────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .job-card {
+    padding: 14px 16px;
+  }
+
+  .job-card--small {
+    padding: 10px 16px;
+  }
+
+  .job-card__header {
+    margin-bottom: 6px;
+  }
+
+  .job-card__company {
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+
+  .job-card__title {
+    font-size: 15px;
+  }
+
+  .job-card__meta {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .job-card__save-btn,
+  .job-card__hide-btn {
+    width: 30px;
+    height: 30px;
+  }
 }
 
 /* ─── 스켈레톤 shimmer ───────────────────────────────── */
