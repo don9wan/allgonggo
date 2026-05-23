@@ -53,7 +53,7 @@ export function Navbar({ onOpenSaved, onOpenHidden, searchValue, onSearchChange 
       <div className="navbar__inner">
         <div className="navbar__left">
           <div className="navbar__logo">
-            <img className="navbar__logo-icon" src={logoSrc} alt="올공고 로고" width="28" height="28" />
+            <img className="navbar__logo-icon" src={logoSrc} alt="올공고 로고" width="18" height="18" />
             <span className="navbar__logo-text">올공고</span>
           </div>
           <label className="navbar__toggle" title="이미 확인한 공고 보지 않기">
