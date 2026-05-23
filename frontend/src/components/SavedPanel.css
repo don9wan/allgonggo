@@ -20,7 +20,7 @@
   background: var(--color-background);
   display: flex;
   flex-direction: column;
-  animation: panel-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: panel-in 280ms cubic-bezier(0.25, 0, 0, 1);
   overflow: hidden;
 }
 
