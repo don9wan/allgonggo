@@ -1,7 +1,4 @@
 .navbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
@@ -150,56 +147,8 @@
   justify-content: center;
 }
 
-.navbar__toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.navbar__toggle-label {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-.toggle-switch {
-  width: 40px;
-  height: 24px;
-  border-radius: 99px;
-  background: var(--color-border);
-  position: relative;
-  cursor: pointer;
-  transition: background 200ms ease;
-  flex-shrink: 0;
-}
-
-.toggle-switch--on {
-  background: var(--color-accent);
-}
-
-.toggle-switch__knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.toggle-switch--on .toggle-switch__knob {
-  transform: translateX(16px);
-}
-
 @media (max-width: 767px) {
   .navbar__logo-text {
-    display: none;
-  }
-
-  .navbar__toggle-label {
     display: none;
   }
 

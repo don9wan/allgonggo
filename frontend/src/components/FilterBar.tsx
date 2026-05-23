@@ -166,7 +166,7 @@ function FilterDropdown({
 }
 
 export function FilterBar() {
-  const { filters, setFilters, resetFilters } = useJobStore();
+  const { filters, setFilters, resetFilters, hideViewed, toggleHideViewed } = useJobStore();
   const [openKey, setOpenKey] = useState<FilterKey | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -174,7 +174,8 @@ export function FilterBar() {
     filters.location.length > 0 ||
     filters.experience.length > 0 ||
     filters.employment_type.length > 0 ||
-    filters.source.length > 0;
+    filters.source.length > 0 ||
+    hideViewed;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -202,6 +203,12 @@ export function FilterBar() {
   return (
     <div className="filter-bar" ref={barRef}>
       <div className="filter-bar__inner">
+        <button
+          className={`filter-btn filter-btn--toggle${hideViewed ? " filter-btn--active" : ""}`}
+          onClick={toggleHideViewed}
+        >
+          <span className="filter-btn__label">확인함 숨기기</span>
+        </button>
         {FILTER_CONFIGS.map((config) => (
           <FilterDropdown
             key={config.key}
@@ -221,6 +228,7 @@ export function FilterBar() {
             className="filter-reset-btn"
             onClick={() => {
               resetFilters();
+              if (hideViewed) toggleHideViewed();
               setOpenKey(null);
             }}
           >

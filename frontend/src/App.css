@@ -1,1 +1,7 @@
 /* App-level styles - components handle their own CSS */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}

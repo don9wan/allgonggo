@@ -9,6 +9,7 @@ import { HiddenPanel } from "./components/HiddenPanel";
 import { useJobStore } from "./store/jobStore";
 import type { SavedJob } from "./types/job";
 import "./components/JobCard.css";
+import "./App.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,13 +49,15 @@ function AppInner() {
 
   return (
     <>
-      <Navbar
-        onOpenSaved={() => setShowSaved(true)}
-        onOpenHidden={() => setShowHidden(true)}
-        searchValue={filters.q}
-        onSearchChange={(v) => setFilters({ q: v })}
-      />
-      <FilterBar />
+      <div className="app-header">
+        <Navbar
+          onOpenSaved={() => setShowSaved(true)}
+          onOpenHidden={() => setShowHidden(true)}
+          searchValue={filters.q}
+          onSearchChange={(v) => setFilters({ q: v })}
+        />
+        <FilterBar />
+      </div>
       <FeedPage
         returnedJob={returnedJob}
         onClearReturned={() => setReturnedJob(null)}

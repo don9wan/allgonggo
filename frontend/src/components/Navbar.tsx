@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function Navbar({ onOpenSaved, onOpenHidden, searchValue, onSearchChange }: Props) {
-  const { savedJobs, hideViewed, toggleHideViewed } = useJobStore();
+  const { savedJobs } = useJobStore();
   const [inputValue, setInputValue] = useState(searchValue);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 767);
@@ -56,15 +56,6 @@ export function Navbar({ onOpenSaved, onOpenHidden, searchValue, onSearchChange 
             <img className="navbar__logo-icon" src={logoSrc} alt="올공고 로고" width="18" height="18" />
             <span className="navbar__logo-text">올공고</span>
           </div>
-          <label className="navbar__toggle" title="이미 확인한 공고 보지 않기">
-            <span className="navbar__toggle-label">확인한 공고 숨기기</span>
-            <div
-              className={`toggle-switch${hideViewed ? " toggle-switch--on" : ""}`}
-              onClick={toggleHideViewed}
-            >
-              <div className="toggle-switch__knob" />
-            </div>
-          </label>
         </div>
 
         <div className="navbar__center">

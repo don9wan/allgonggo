@@ -1,10 +1,7 @@
 /* ─── FilterBar 컨테이너 ─────────────────────────────── */
 .filter-bar {
   border-bottom: 1px solid var(--color-border);
-  background: white; /* backdrop-filter 제거: fixed 자식의 containing block 오염 방지 */
-  position: sticky;
-  top: 57px;
-  z-index: 90;
+  background: white;
 }
 
 .filter-bar__inner {
@@ -94,6 +91,13 @@
 
 .filter-btn__chevron--up {
   transform: rotate(180deg);
+}
+
+/* ─── 토글 칩 구분선 ─────────────────────────────────── */
+.filter-btn--toggle {
+  border-right: 1px solid var(--color-border);
+  padding-right: 16px;
+  margin-right: 4px;
 }
 
 /* ─── 초기화 버튼 ────────────────────────────────────── */
@@ -243,10 +247,6 @@
 
 /* ─── 모바일 ─────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .filter-bar {
-    top: 56px;
-  }
-
   .filter-bar__inner {
     padding: 8px 16px;
     gap: 6px;
