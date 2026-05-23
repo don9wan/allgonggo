@@ -92,7 +92,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
     <main className="feed-page">
       <div className="feed-page__inner">
         {data?.total !== undefined && (
-          <p className="feed-page__count">공고 {data.total.toLocaleString()}건</p>
+          <p className="feed-page__count">최근 2주 내 올라온 공고 {data.total.toLocaleString()}건</p>
         )}
 
         {isError && (
