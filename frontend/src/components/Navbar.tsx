@@ -4,11 +4,12 @@ import "./Navbar.css";
 
 interface Props {
   onOpenSaved: () => void;
+  onOpenHidden: () => void;
   searchValue: string;
   onSearchChange: (v: string) => void;
 }
 
-export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
+export function Navbar({ onOpenSaved, onOpenHidden, searchValue, onSearchChange }: Props) {
   const { savedJobs, hideViewed, toggleHideViewed } = useJobStore();
   const [inputValue, setInputValue] = useState(searchValue);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -51,11 +52,8 @@ export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
       <div className="navbar__inner">
         <div className="navbar__left">
           <div className="navbar__logo">
-            <svg className="navbar__logo-icon" width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <rect width="28" height="28" rx="7" fill="#1A56DB"/>
-              <rect x="7" y="8" width="14" height="2.5" rx="1.25" fill="white"/>
-              <rect x="7" y="12.75" width="10" height="2.5" rx="1.25" fill="white"/>
-              <rect x="7" y="17.5" width="12" height="2.5" rx="1.25" fill="white"/>
+            <svg className="navbar__logo-icon" width="24" height="23" viewBox="0 0 48 46" fill="none">
+              <path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
             </svg>
             <span className="navbar__logo-text">올공고</span>
           </div>
@@ -118,14 +116,7 @@ export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
             onClick={onOpenSaved}
             title="저장함"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
             {newSaved > 0 && (
@@ -133,6 +124,18 @@ export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
                 {newSaved > 99 ? "99+" : newSaved}
               </span>
             )}
+          </button>
+          <button
+            className="navbar__hidden-btn"
+            onClick={onOpenHidden}
+            title="안 보는 공고"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
           </button>
         </div>
       </div>

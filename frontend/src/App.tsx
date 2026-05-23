@@ -5,6 +5,7 @@ import { FilterBar } from "./components/FilterBar";
 import { FeedPage } from "./pages/FeedPage";
 import { AdminPage } from "./pages/AdminPage";
 import { SavedPanel } from "./components/SavedPanel";
+import { HiddenPanel } from "./components/HiddenPanel";
 import { useJobStore } from "./store/jobStore";
 import type { SavedJob } from "./types/job";
 import "./components/JobCard.css";
@@ -31,6 +32,7 @@ function useHash() {
 function AppInner() {
   const { filters, setFilters, unsaveJob } = useJobStore();
   const [showSaved, setShowSaved] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const [returnedJob, setReturnedJob] = useState<SavedJob | null>(null);
   const hash = useHash();
 
@@ -48,6 +50,7 @@ function AppInner() {
     <>
       <Navbar
         onOpenSaved={() => setShowSaved(true)}
+        onOpenHidden={() => setShowHidden(true)}
         searchValue={filters.q}
         onSearchChange={(v) => setFilters({ q: v })}
       />
@@ -61,6 +64,9 @@ function AppInner() {
           onClose={() => setShowSaved(false)}
           onReturnToFeed={handleReturnToFeed}
         />
+      )}
+      {showHidden && (
+        <HiddenPanel onClose={() => setShowHidden(false)} />
       )}
     </>
   );

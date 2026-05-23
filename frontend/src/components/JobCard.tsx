@@ -39,10 +39,12 @@ const SOURCE_FAVICONS: Record<string, string> = {
 
 export function JobCard({ job, status, onSave, isLastSeen }: Props) {
   const markViewed = useJobStore((s) => s.markViewed);
+  const hideJob = useJobStore((s) => s.hideJob);
   const [exiting, setExiting] = useState(false);
 
   const isViewed = status === "viewed" || status === "last_seen";
   const isSmall = isViewed;
+  const showActions = !isSmall || isLastSeen;
 
   const borderColor = (() => {
     if (isLastSeen) return "var(--color-state-last-seen)";
@@ -61,6 +63,11 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
     setTimeout(() => onSave(job), 300);
   };
 
+  const handleHide = () => {
+    setExiting(true);
+    setTimeout(() => hideJob(job), 300);
+  };
+
   return (
     <div
       className={`job-card${isSmall ? " job-card--small" : ""}${exiting ? " job-card--exit" : ""}`}
@@ -68,16 +75,28 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
       data-id={job.id}
     >
       <div className="job-card__header">
-        <div>
+        <div className="job-card__text">
           <p className="job-card__company">{job.company}</p>
           <h3 className="job-card__title">{job.title}</h3>
         </div>
-        {!isSmall && onSave && (
-          <button className="job-card__save-btn" onClick={handleSave} title="저장">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
+        {showActions && (
+          <div className="job-card__actions">
+            {onSave && (
+              <button className="job-card__save-btn" onClick={handleSave} title="저장">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
+            )}
+            <button className="job-card__hide-btn" onClick={handleHide} title="안 보기">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 

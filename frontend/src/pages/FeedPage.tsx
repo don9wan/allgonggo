@@ -12,8 +12,9 @@ interface Props {
 }
 
 export function FeedPage({ returnedJob, onClearReturned }: Props) {
-  const { filters, viewedIds, lastSeenId, hideViewed, savedJobs, saveJob } = useJobStore();
+  const { filters, viewedIds, lastSeenId, hideViewed, savedJobs, saveJob, hiddenJobs } = useJobStore();
   const savedIds = new Set(savedJobs.map((j) => j.id));
+  const hiddenIds = new Set(hiddenJobs.map((j) => j.id));
 
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const displayJobs = useMemo(() => {
-    let jobs = allJobs.filter((j) => !savedIds.has(j.id));
+    let jobs = allJobs.filter((j) => !savedIds.has(j.id) && !hiddenIds.has(j.id));
 
     if (returnedJob) {
       const alreadyIn = jobs.find((j) => j.id === returnedJob.id);

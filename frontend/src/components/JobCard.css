@@ -74,8 +74,14 @@
   line-height: 1.4;
 }
 
-.job-card__save-btn {
+.job-card__actions {
+  display: flex;
+  gap: 2px;
   flex-shrink: 0;
+}
+
+.job-card__save-btn,
+.job-card__hide-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,6 +95,11 @@
 .job-card__save-btn:hover {
   background: var(--color-border);
   color: var(--color-accent);
+}
+
+.job-card__hide-btn:hover {
+  background: var(--color-border);
+  color: #EF4444;
 }
 
 .job-card__meta {

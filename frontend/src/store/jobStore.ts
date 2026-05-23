@@ -25,6 +25,10 @@ interface JobStore {
   saveJob: (job: Job) => void;
   unsaveJob: (id: string) => void;
   setJobStatus: (id: string, status: "applied" | "rejected" | "saved") => void;
+
+  hiddenJobs: Job[];
+  hideJob: (job: Job) => void;
+  unhideJob: (id: string) => void;
 }
 
 export const useJobStore = create<JobStore>()(
@@ -64,6 +68,14 @@ export const useJobStore = create<JobStore>()(
             j.id === id ? { ...j, status } : j
           ),
         })),
+
+      hiddenJobs: [],
+      hideJob: (job) => {
+        if (get().hiddenJobs.find((j) => j.id === job.id)) return;
+        set((s) => ({ hiddenJobs: [job, ...s.hiddenJobs] }));
+      },
+      unhideJob: (id) =>
+        set((s) => ({ hiddenJobs: s.hiddenJobs.filter((j) => j.id !== id) })),
     }),
     {
       name: "allgonggo-store",
@@ -73,6 +85,7 @@ export const useJobStore = create<JobStore>()(
         hideViewed: s.hideViewed,
         savedJobs: s.savedJobs,
         lastSeenId: s.lastSeenId,
+        hiddenJobs: s.hiddenJobs,
       }),
       merge: (persisted: any, current) => ({
         ...current,
