@@ -93,12 +93,6 @@
   transform: rotate(180deg);
 }
 
-/* ─── 눈 아이콘 토글 버튼 ────────────────────────────── */
-.filter-btn--toggle {
-  padding: 0 10px;
-  border-right: 1px solid var(--color-border);
-  margin-right: 4px;
-}
 
 /* ─── 초기화 버튼 ────────────────────────────────────── */
 .filter-reset-btn {
