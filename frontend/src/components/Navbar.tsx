@@ -50,7 +50,15 @@ export function Navbar({ onOpenSaved, searchValue, onSearchChange }: Props) {
     <nav className="navbar">
       <div className="navbar__inner">
         <div className="navbar__left">
-          <span className="navbar__logo">올공고</span>
+          <div className="navbar__logo">
+            <svg className="navbar__logo-icon" width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <rect width="28" height="28" rx="7" fill="#1A56DB"/>
+              <rect x="7" y="8" width="14" height="2.5" rx="1.25" fill="white"/>
+              <rect x="7" y="12.75" width="10" height="2.5" rx="1.25" fill="white"/>
+              <rect x="7" y="17.5" width="12" height="2.5" rx="1.25" fill="white"/>
+            </svg>
+            <span className="navbar__logo-text">올공고</span>
+          </div>
           <label className="navbar__toggle" title="이미 확인한 공고 보지 않기">
             <span className="navbar__toggle-label">확인한 공고 숨기기</span>
             <div

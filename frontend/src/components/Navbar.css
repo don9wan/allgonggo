@@ -24,6 +24,17 @@
 }
 
 .navbar__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.navbar__logo-icon {
+  flex-shrink: 0;
+}
+
+.navbar__logo-text {
   font-size: 17px;
   font-weight: 700;
   color: var(--color-text-primary);
@@ -165,6 +176,10 @@
 }
 
 @media (max-width: 767px) {
+  .navbar__logo-text {
+    display: none;
+  }
+
   .navbar__toggle-label {
     display: none;
   }
