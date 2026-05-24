@@ -1,2 +1,7 @@
 .DS_Store
 *.local
+.env
+__pycache__/
+*.pyc
+*.pyo
+db_backup_*.json

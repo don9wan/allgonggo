@@ -1,0 +1,9 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+pydantic-settings>=2.0.0
+apscheduler>=3.10.0
+cloakbrowser>=0.3.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
