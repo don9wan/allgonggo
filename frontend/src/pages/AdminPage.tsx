@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getStatus, triggerCrawl, triggerWanted, triggerJumpit, triggerCatch, triggerGroupby, getRecentJobs, debugWanted } from "../api/admin";
+import { getStatus, triggerCrawl, triggerWanted, triggerLinkareer, triggerJasoseol, triggerCatch, triggerGroupby, getRecentJobs, debugWanted } from "../api/admin";
 import "./AdminPage.css";
 
 type Status = {
@@ -191,8 +191,11 @@ export function AdminPage() {
             <button className="btn-secondary" onClick={handleCrawlWanted} disabled={crawling}>
               원티드
             </button>
-            <button className="btn-secondary" onClick={() => handleCrawlSingle("점핏", () => triggerJumpit(key))} disabled={crawling}>
-              점핏
+            <button className="btn-secondary" onClick={() => handleCrawlSingle("링커리어", () => triggerLinkareer(key))} disabled={crawling}>
+              링커리어
+            </button>
+            <button className="btn-secondary" onClick={() => handleCrawlSingle("자소설닷컴", () => triggerJasoseol(key))} disabled={crawling}>
+              자소설닷컴
             </button>
             <button className="btn-secondary" onClick={() => handleCrawlSingle("캐치", () => triggerCatch(key))} disabled={crawling}>
               캐치
@@ -214,8 +217,8 @@ export function AdminPage() {
           <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
             <option value="">전체 소스</option>
             <option value="wanted">원티드</option>
-            <option value="jumpit">점핏</option>
-            <option value="programmers">프로그래머스</option>
+            <option value="linkareer">링커리어</option>
+            <option value="jasoseol">자소설닷컴</option>
             <option value="catch">캐치</option>
             <option value="groupby">그룹바이</option>
           </select>

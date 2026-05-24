@@ -23,18 +23,18 @@ interface Props {
 
 const SOURCE_LABELS: Record<string, string> = {
   wanted: "원티드",
-  jumpit: "점핏",
-  programmers: "프로그래머스",
+  linkareer: "링커리어",
+  jasoseol: "자소설닷컴",
   catch: "캐치",
   groupby: "그룹바이",
 };
 
 const SOURCE_FAVICONS: Record<string, string> = {
   wanted: "https://www.wanted.co.kr/favicon.ico",
-  jumpit: "https://jumpit.saramin.co.kr/favicon.ico",
-  programmers: "https://programmers.co.kr/favicon.ico",
+  linkareer: "https://linkareer.com/favicon.ico",
+  jasoseol: "https://jasoseol.com/favicon.ico",
   catch: "https://www.catch.co.kr/favicon.ico",
-  groupby: "https://www.groupby.kr/favicon.ico",
+  groupby: "https://groupby.kr/favicon.ico",
 };
 
 export function JobCard({ job, status, onSave, isLastSeen }: Props) {

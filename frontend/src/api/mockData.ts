@@ -24,7 +24,7 @@ export const MOCK_JOBS: JobListResponse = {
       crawled_at: new Date().toISOString(),
       sources: [
         { id: "s2", source: "wanted", url: "https://www.wanted.co.kr/wd/2" },
-        { id: "s3", source: "jumpit", url: "https://jumpit.saramin.co.kr/2" },
+        { id: "s3", source: "linkareer", url: "https://linkareer.com/recruit/2" },
       ],
     },
     {
@@ -36,7 +36,7 @@ export const MOCK_JOBS: JobListResponse = {
       employment_type: "정규직",
       is_active: true,
       crawled_at: new Date().toISOString(),
-      sources: [{ id: "s4", source: "programmers", url: "https://programmers.co.kr/job" }],
+      sources: [{ id: "s4", source: "jasoseol", url: "https://jasoseol.com/job/3" }],
     },
     {
       id: "mock-4",

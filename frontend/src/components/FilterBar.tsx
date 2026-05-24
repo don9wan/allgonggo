@@ -31,7 +31,8 @@ const FILTER_CONFIGS = [
     label: "출처",
     options: [
       { value: "wanted", label: "원티드" },
-      { value: "jumpit", label: "점핏" },
+      { value: "linkareer", label: "링커리어" },
+      { value: "jasoseol", label: "자소설닷컴" },
       { value: "catch", label: "캐치" },
       { value: "groupby", label: "그룹바이" },
     ],

@@ -1,6 +1,6 @@
 export interface JobSource {
   id: string;
-  source: "wanted" | "jumpit" | "programmers" | "catch" | "groupby";
+  source: "wanted" | "linkareer" | "jasoseol" | "catch" | "groupby";
   url: string;
 }
 

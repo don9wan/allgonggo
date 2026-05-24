@@ -8,10 +8,10 @@ logger = logging.getLogger(__name__)
 
 CRAWLER_STATUS = {
     "wanted": {"active": True, "note": "API v4 정상 동작 (신입/IT 필터 적용)"},
-    "jumpit": {"active": True, "note": "jumpit-api.saramin.co.kr 직접 호출 가능"},
-    "programmers": {"active": False, "note": "career.programmers.co.kr 도메인 없음 (NXDOMAIN)"},
-    "catch": {"active": True, "note": "API 직접 호출 가능 (Career=1 신입 필터)"},
-    "groupby": {"active": True, "note": "Playwright 브라우저 응답 캡처 방식"},
+    "linkareer": {"active": True, "note": "GraphQL API 직접 호출"},
+    "jasoseol": {"active": True, "note": "API 직접 호출 (신입/IT 필터 적용)"},
+    "catch": {"active": True, "note": "API 직접 호출 (Career=1 신입 필터)"},
+    "groupby": {"active": True, "note": "API 직접 호출"},
 }
 
 
@@ -48,14 +48,14 @@ async def trigger_crawl(x_admin_key: str = Header(...)):
 
     async def run():
         from app.crawlers.wanted import crawl_wanted
-        from app.crawlers.jumpit import crawl_jumpit
-        from app.crawlers.programmers import crawl_programmers
+        from app.crawlers.linkareer import crawl_linkareer
+        from app.crawlers.jasoseol import crawl_jasoseol
         from app.crawlers.catch import crawl_catch
         from app.crawlers.groupby import crawl_groupby
         for name, fn in [
             ("wanted", crawl_wanted),
-            ("jumpit", crawl_jumpit),
-            ("programmers", crawl_programmers),
+            ("linkareer", crawl_linkareer),
+            ("jasoseol", crawl_jasoseol),
             ("catch", crawl_catch),
             ("groupby", crawl_groupby),
         ]:
@@ -78,12 +78,21 @@ async def trigger_wanted(x_admin_key: str = Header(...)):
     return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
 
 
-@router.post("/crawl/jumpit")
-async def trigger_jumpit(x_admin_key: str = Header(...)):
-    """점핏만 즉시 크롤링 (결과 반환)."""
+@router.post("/crawl/linkareer")
+async def trigger_linkareer(x_admin_key: str = Header(...)):
+    """링커리어만 즉시 크롤링 (결과 반환)."""
     _check_key(x_admin_key)
-    from app.crawlers.jumpit import crawl_jumpit
-    jobs = await crawl_jumpit()
+    from app.crawlers.linkareer import crawl_linkareer
+    jobs = await crawl_linkareer()
+    return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
+
+
+@router.post("/crawl/jasoseol")
+async def trigger_jasoseol(x_admin_key: str = Header(...)):
+    """자소설닷컴만 즉시 크롤링 (결과 반환)."""
+    _check_key(x_admin_key)
+    from app.crawlers.jasoseol import crawl_jasoseol
+    jobs = await crawl_jasoseol()
     return {"count": len(jobs), "sample": [{"title": j.title, "company": j.company} for j in jobs[:5]]}
 
 
@@ -170,28 +179,6 @@ async def debug_catch(x_admin_key: str = Header(...)):
     except Exception as e:
         result["error"] = str(e)
     return result
-
-
-@router.get("/debug/jumpit")
-async def debug_jumpit(x_admin_key: str = Header(...)):
-    """점핏 API Railway 환경 접근 테스트."""
-    _check_key(x_admin_key)
-    url = "https://jumpit-api.saramin.co.kr/api/positions"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Referer": "https://jumpit.saramin.co.kr/",
-        "Origin": "https://jumpit.saramin.co.kr",
-        "Accept-Language": "ko-KR,ko;q=0.9",
-    }
-    async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-        try:
-            r = await client.get(url, params={"jobCategory": 1, "career": 0, "sort": "rsp_rate", "highlight": "false", "page": 1}, headers=headers)
-            data = r.json() if r.status_code == 200 else {}
-            total = data.get("result", {}).get("totalCount", 0)
-            return {"status": r.status_code, "total": total}
-        except Exception as e:
-            return {"error": str(e)}
 
 
 @router.get("/debug/wanted")

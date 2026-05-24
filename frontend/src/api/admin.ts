@@ -22,8 +22,13 @@ export async function triggerWanted(key: string) {
   return data;
 }
 
-export async function triggerJumpit(key: string) {
-  const { data } = await client.post("/admin/crawl/jumpit", null, { headers: headers(key) });
+export async function triggerLinkareer(key: string) {
+  const { data } = await client.post("/admin/crawl/linkareer", null, { headers: headers(key) });
+  return data;
+}
+
+export async function triggerJasoseol(key: string) {
+  const { data } = await client.post("/admin/crawl/jasoseol", null, { headers: headers(key) });
   return data;
 }
 
