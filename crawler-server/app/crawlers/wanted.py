@@ -44,6 +44,15 @@ def _parse_job(item: dict) -> RawJob | None:
         parts = [address.get("location", ""), address.get("district", "")]
         location = " ".join(p for p in parts if p).strip() or None
 
+        # 고용형태: API 응답의 employment_type.code 필드 파싱
+        emp_code = ((item.get("employment_type") or {}).get("code") or "")
+        if "intern" in emp_code:
+            employment_type = "인턴"
+        elif "contract" in emp_code:
+            employment_type = "계약직"
+        else:
+            employment_type = "정규직"
+
         url = f"https://www.wanted.co.kr/wd/{job_id}"
         return RawJob(
             title=title,
@@ -51,8 +60,8 @@ def _parse_job(item: dict) -> RawJob | None:
             url=url,
             source="wanted",
             location=location,
-            experience="신입",
-            employment_type="정규직",
+            experience="신입",  # years=0 파라미터로 신입만 수집
+            employment_type=employment_type,
             raw_text=f"{title} {company} {location or ''}".strip(),
         )
     except Exception as e:

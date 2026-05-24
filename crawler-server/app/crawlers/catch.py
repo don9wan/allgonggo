@@ -5,7 +5,7 @@ from cloakbrowser import launch_async
 
 from app.crawlers.base import RawJob
 from app.crawlers.browser import random_delay
-from app.crawlers.db_writer import upsert_jobs
+from app.crawlers.db_writer import is_caught_up, upsert_jobs
 from app.db.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
@@ -100,13 +100,17 @@ async def crawl_catch():
                 if not items:
                     break
 
-                for item in items:
-                    job = _parse_job(item)
-                    if job and job.url not in seen_urls:
+                page_jobs = [j for item in items if (j := _parse_job(item)) is not None]
+
+                async with AsyncSessionLocal() as session:
+                    caught_up = await is_caught_up(session, page_jobs)
+
+                for job in page_jobs:
+                    if job.url not in seen_urls:
                         seen_urls.add(job.url)
                         all_jobs.append(job)
 
-                if page_num * PAGE_SIZE >= total:
+                if caught_up or page_num * PAGE_SIZE >= total:
                     break
 
                 page_num += 1
