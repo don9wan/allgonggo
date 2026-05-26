@@ -12,10 +12,10 @@ const SOURCE_LABELS: Record<string, string> = {
 
 const SOURCE_FAVICONS: Record<string, string> = {
   wanted: "https://www.wanted.co.kr/favicon.ico",
-  linkareer: "https://linkareer.com/favicon.ico",
+  linkareer: "https://linkareer.com/images/favicon.ico",
   jasoseol: "https://jasoseol.com/favicon.ico",
   catch: "https://www.catch.co.kr/favicon.ico",
-  groupby: "https://groupby.kr/favicon.ico",
+  groupby: "https://groupby.kr/favicon.png",
 };
 
 interface SavedCardProps {
