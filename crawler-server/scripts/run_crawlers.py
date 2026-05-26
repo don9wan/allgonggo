@@ -19,14 +19,20 @@ CRAWLERS = {
 }
 
 
-async def _run_with_retry(name: str, fn, retries: int = 2, delay: int = 15):
+_RETRYABLE_ERRORS = ("starting up", "connection refused", "the database system", "cannot connect now")
+
+
+async def _run_with_retry(name: str, fn, retries: int = 5, base_delay: int = 15):
     for attempt in range(retries + 1):
         try:
             await fn()
             return
         except Exception as e:
-            if attempt < retries and "starting up" in str(e).lower():
-                print(f"[{name}] DB 시작 중, {delay}초 후 재시도 ({attempt + 1}/{retries})")
+            err = str(e).lower()
+            is_retryable = any(msg in err for msg in _RETRYABLE_ERRORS)
+            if attempt < retries and is_retryable:
+                delay = base_delay * (2 ** attempt)
+                print(f"[{name}] DB 연결 실패, {delay}초 후 재시도 ({attempt + 1}/{retries})")
                 await asyncio.sleep(delay)
             else:
                 raise

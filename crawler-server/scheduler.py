@@ -3,24 +3,40 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import text
 
 from app.crawlers import wanted, catch, linkareer, groupby, jasoseol
+from app.db.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
+_RETRYABLE_ERRORS = ("starting up", "connection refused", "the database system", "cannot connect now")
 
-async def _run_with_retry(name: str, fn, retries: int = 2, delay: int = 15):
-    """DB 시작 중 오류 시 재시도."""
+
+async def _run_with_retry(name: str, fn, retries: int = 5, base_delay: int = 15):
+    """DB 연결 실패 시 지수 백오프로 재시도 (15→30→60→120→240초)."""
     for attempt in range(retries + 1):
         try:
             await fn()
             return
         except Exception as e:
-            if attempt < retries and "starting up" in str(e).lower():
-                logger.warning(f"[{name}] DB 시작 중, {delay}초 후 재시도 ({attempt + 1}/{retries})")
+            err = str(e).lower()
+            is_retryable = any(msg in err for msg in _RETRYABLE_ERRORS)
+            if attempt < retries and is_retryable:
+                delay = base_delay * (2 ** attempt)
+                logger.warning(f"[{name}] DB 연결 실패, {delay}초 후 재시도 ({attempt + 1}/{retries}): {e}")
                 await asyncio.sleep(delay)
             else:
                 raise
+
+
+async def _db_keepalive():
+    """Railway PostgreSQL 슬립 방지용 주기적 ping."""
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as e:
+        logger.warning(f"[keepalive] DB ping 실패: {e}")
 
 
 SOURCES = ["wanted", "linkareer", "jasoseol", "catch", "groupby"]
@@ -48,7 +64,6 @@ async def run_all_crawlers():
 async def run_cleanup():
     """마감 공고 비활성화. 30일 이상 확인되지 않은 공고를 is_active=False 처리."""
     from app.crawlers.db_writer import deactivate_stale_jobs
-    from app.db.database import AsyncSessionLocal
 
     total = 0
     for source in SOURCES:
@@ -64,6 +79,15 @@ async def run_cleanup():
 
 def start_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
+
+    # Railway PostgreSQL 슬립 방지 — 5분마다 ping
+    scheduler.add_job(
+        _db_keepalive,
+        "interval",
+        minutes=5,
+        id="db_keepalive",
+        max_instances=1,
+    )
 
     # 평일(월-금) 10/12/14/16/18/20시 크롤링
     scheduler.add_job(
