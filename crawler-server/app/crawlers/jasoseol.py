@@ -3,10 +3,8 @@ import logging
 import re
 from typing import List, Optional
 
-from cloakbrowser import launch_async
-
 from app.crawlers.base import RawJob
-from app.crawlers.browser import random_delay
+from app.crawlers.browser import launch_browser, random_delay
 from app.crawlers.db_writer import is_caught_up, upsert_jobs
 from app.db.database import AsyncSessionLocal
 
@@ -88,7 +86,7 @@ async def crawl_jasoseol():
     logger.info("자소설닷컴 크롤링 시작")
     all_jobs: List[RawJob] = []
 
-    browser = await launch_async(headless=True, humanize=True)
+    browser = await launch_browser()
     try:
         context = await browser.new_context()
         page = await context.new_page()
