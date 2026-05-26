@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -6,6 +7,20 @@ from apscheduler.triggers.cron import CronTrigger
 from app.crawlers import wanted, catch, linkareer, groupby, jasoseol
 
 logger = logging.getLogger(__name__)
+
+
+async def _run_with_retry(name: str, fn, retries: int = 2, delay: int = 15):
+    """DB 시작 중 오류 시 재시도."""
+    for attempt in range(retries + 1):
+        try:
+            await fn()
+            return
+        except Exception as e:
+            if attempt < retries and "starting up" in str(e).lower():
+                logger.warning(f"[{name}] DB 시작 중, {delay}초 후 재시도 ({attempt + 1}/{retries})")
+                await asyncio.sleep(delay)
+            else:
+                raise
 
 
 SOURCES = ["wanted", "linkareer", "jasoseol", "catch", "groupby"]
@@ -23,7 +38,7 @@ async def run_all_crawlers():
     for name, fn in crawlers:
         try:
             logger.info(f"[{name}] 시작")
-            await fn()
+            await _run_with_retry(name, fn)
             logger.info(f"[{name}] 완료")
         except Exception as e:
             logger.exception(f"[{name}] 실패: {e}")

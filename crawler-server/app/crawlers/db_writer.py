@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 
-from sqlalchemy import select, func, text, update
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crawlers.base import RawJob
@@ -13,6 +13,20 @@ logger = logging.getLogger(__name__)
 
 SIMILARITY_THRESHOLD = 0.8
 CATCHUP_RATIO = 0.70
+_URL_CHUNK = 500
+
+
+def _trigram_sim(a: str, b: str) -> float:
+    """PostgreSQL pg_trgm similarity 동일 알고리즘을 Python으로 구현. DB round-trip 없이 계산."""
+    def trigrams(s: str) -> set:
+        s = f"  {s.lower()}  "
+        return {s[i:i+3] for i in range(len(s) - 2)}
+    ta, tb = trigrams(a), trigrams(b)
+    if not ta and not tb:
+        return 1.0
+    if not ta or not tb:
+        return 0.0
+    return 2 * len(ta & tb) / (len(ta) + len(tb))
 
 
 async def already_seen_ratio(session: AsyncSession, urls: List[str]) -> float:
@@ -89,7 +103,7 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
 
     source = raw_jobs[0].source
 
-    # ── 1. 기존 데이터 메모리 로드 (소스 단위 필터링으로 메모리 절약) ──
+    # ── 1. 기존 데이터 메모리 로드 (소스 단위 필터링, 필요 컬럼만) ──
     existing_urls: set[str] = {
         row[0]
         for row in (await session.execute(
@@ -97,13 +111,15 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
         )).all()
     }
 
-    existing_jobs_list = (
-        await session.execute(select(Job).where(Job.is_active == True))
-    ).scalars().all()
+    existing_jobs_rows = (
+        await session.execute(
+            select(Job.id, Job.title, Job.company).where(Job.is_active == True)
+        )
+    ).all()
 
     jobs_by_company: dict[str, list] = {}
-    for job in existing_jobs_list:
-        jobs_by_company.setdefault(job.company.lower(), []).append(job)
+    for row in existing_jobs_rows:
+        jobs_by_company.setdefault(row.company.lower(), []).append(row)
 
     existing_source_keys: set[tuple] = {
         (str(row[0]), row[1])
@@ -131,11 +147,7 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
 
         matched_job = None
         for candidate in candidates:
-            sim = (await session.execute(
-                text("SELECT similarity(:a, :b)"),
-                {"a": raw.title, "b": candidate.title},
-            )).scalar()
-            if sim and sim >= SIMILARITY_THRESHOLD:
+            if _trigram_sim(raw.title, candidate.title) >= SIMILARITY_THRESHOLD:
                 matched_job = candidate
                 break
 
@@ -174,13 +186,16 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
 
     await session.commit()
 
-    # 기존 URL crawled_at 일괄 갱신 (마지막 확인일 추적)
+    # 기존 URL crawled_at 청크 단위 갱신 (대량 IN절 방지)
     if seen_existing_urls:
-        await session.execute(
-            update(JobSource)
-            .where(JobSource.url.in_(seen_existing_urls))
-            .values(crawled_at=datetime.now(timezone.utc))
-        )
+        now = datetime.now(timezone.utc)
+        for i in range(0, len(seen_existing_urls), _URL_CHUNK):
+            chunk = seen_existing_urls[i:i + _URL_CHUNK]
+            await session.execute(
+                update(JobSource)
+                .where(JobSource.url.in_(chunk))
+                .values(crawled_at=now)
+            )
         await session.commit()
         logger.info(f"  기존 URL {len(seen_existing_urls)}건 갱신")
 

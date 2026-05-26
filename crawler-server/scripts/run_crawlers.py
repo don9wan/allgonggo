@@ -19,16 +19,29 @@ CRAWLERS = {
 }
 
 
+async def _run_with_retry(name: str, fn, retries: int = 2, delay: int = 15):
+    for attempt in range(retries + 1):
+        try:
+            await fn()
+            return
+        except Exception as e:
+            if attempt < retries and "starting up" in str(e).lower():
+                print(f"[{name}] DB 시작 중, {delay}초 후 재시도 ({attempt + 1}/{retries})")
+                await asyncio.sleep(delay)
+            else:
+                raise
+
+
 async def main(target: str):
     if target == "all":
         for name, fn in CRAWLERS.items():
             print(f"=== {name} 시작 ===")
             try:
-                await fn()
+                await _run_with_retry(name, fn)
             except Exception as e:
                 print(f"!!! {name} 실패: {e}")
     elif target in CRAWLERS:
-        await CRAWLERS[target]()
+        await _run_with_retry(target, CRAWLERS[target])
     else:
         print(f"Unknown target: {target}")
         print(f"Available: {list(CRAWLERS.keys()) + ['all']}")
