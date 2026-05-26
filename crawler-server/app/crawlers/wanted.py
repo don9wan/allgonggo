@@ -105,9 +105,11 @@ async def crawl_wanted():
 
                 page_jobs = [j for item in items if (j := _parse_job(item)) is not None]
                 category_jobs.extend(page_jobs)
+                logger.info(f"[wanted][{category_name}] offset={offset} — 배치 {len(page_jobs)}건 / 누적 {len(category_jobs)}건")
 
                 async with AsyncSessionLocal() as session:
                     if await is_caught_up(session, page_jobs):
+                        logger.info(f"[wanted][{category_name}] 최신 공고 따라잡음, 조기 종료")
                         break
 
                 if data.get("links", {}).get("next") is None:
@@ -117,7 +119,7 @@ async def crawl_wanted():
                 await random_delay()
 
             await page.close()
-            logger.info(f"원티드 [{category_name}] {len(category_jobs)}건 수집")
+            logger.info(f"[wanted][{category_name}] 완료 — {len(category_jobs)}건")
 
             if category_jobs:
                 async with AsyncSessionLocal() as session:

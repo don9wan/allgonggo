@@ -99,6 +99,7 @@ async def crawl_catch():
                     break
 
                 page_jobs = [j for item in items if (j := _parse_job(item)) is not None]
+                logger.info(f"[catch][{career_label}] p{page_num} — 배치 {len(page_jobs)}건 / 전체 {total}건 중")
 
                 async with AsyncSessionLocal() as session:
                     caught_up = await is_caught_up(session, page_jobs)
@@ -108,13 +109,16 @@ async def crawl_catch():
                         seen_urls.add(job.url)
                         all_jobs.append(job)
 
-                if caught_up or page_num * PAGE_SIZE >= total:
+                if caught_up:
+                    logger.info(f"[catch][{career_label}] 최신 공고 따라잡음, 조기 종료")
+                    break
+                if page_num * PAGE_SIZE >= total:
                     break
 
                 page_num += 1
                 await random_delay()
 
-            logger.info(f"캐치 [{career_label}] 완료, 누적 {len(all_jobs)}건")
+            logger.info(f"[catch][{career_label}] 완료 — 누적 {len(all_jobs)}건")
             await random_delay()
 
     finally:

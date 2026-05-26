@@ -145,19 +145,21 @@ async def _crawl_url_template(page, url_template: str, label: str) -> List[RawJo
             break
 
         results.extend(page_jobs)
+        total_pages = (total_count + PAGE_SIZE - 1) // PAGE_SIZE
+        logger.info(f"[linkareer][{label}] p{page_num}/{total_pages} — 배치 {len(page_jobs)}건 / 누적 {len(results)}건")
 
         async with AsyncSessionLocal() as session:
             if await is_caught_up(session, page_jobs):
+                logger.info(f"[linkareer][{label}] 최신 공고 따라잡음, 조기 종료")
                 break
 
-        total_pages = (total_count + PAGE_SIZE - 1) // PAGE_SIZE
         if page_num >= total_pages:
             break
 
         page_num += 1
         await random_delay()
 
-    logger.info(f"링커리어 [{label}] {len(results)}건 수집")
+    logger.info(f"[linkareer][{label}] 완료 — {len(results)}건")
     return results
 
 

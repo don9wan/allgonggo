@@ -97,8 +97,11 @@ async def crawl_groupby():
                         seen_urls.add(job.url)
                         all_jobs.append(job)
 
+                logger.info(f"[groupby][{career_type}] offset={offset} — 배치 {len(page_jobs)}건 / 누적 {len(all_jobs)}건 / 전체 {total}건 중")
+
                 async with AsyncSessionLocal() as session:
                     if await is_caught_up(session, page_jobs):
+                        logger.info(f"[groupby][{career_type}] 최신 공고 따라잡음, 조기 종료")
                         break
 
                 offset += LIMIT
@@ -108,7 +111,7 @@ async def crawl_groupby():
                 await random_delay()
 
             await page.close()
-            logger.info(f"그룹바이 [{career_type}] 수집 완료")
+            logger.info(f"[groupby][{career_type}] 완료")
             await random_delay()
     finally:
         await browser.close()

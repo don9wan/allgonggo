@@ -119,12 +119,14 @@ async def crawl_jasoseol():
 
             page_jobs = [j for item in items if (j := _parse_job(item)) is not None]
             all_jobs.extend(page_jobs)
+            total_pages = (total_count + PAGE_SIZE - 1) // PAGE_SIZE
+            logger.info(f"[jasoseol] p{page_num}/{total_pages} — 배치 {len(page_jobs)}건 / 누적 {len(all_jobs)}건")
 
             async with AsyncSessionLocal() as session:
                 if await is_caught_up(session, page_jobs):
+                    logger.info("[jasoseol] 최신 공고 따라잡음, 조기 종료")
                     break
 
-            total_pages = (total_count + PAGE_SIZE - 1) // PAGE_SIZE
             if page_num >= total_pages:
                 break
 
