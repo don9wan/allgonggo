@@ -6,6 +6,7 @@ from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
 
 from scheduler import start_scheduler, run_all_crawlers
 from app.core.config import settings
+from app.state import get_status
 
 _crawl_lock = asyncio.Lock()
 
@@ -28,6 +29,12 @@ app = FastAPI(lifespan=lifespan)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/status")
+async def status():
+    """현재 크롤 상태 조회 — Railway 로그 없이도 상태 파악 가능."""
+    return get_status()
 
 
 @app.post("/trigger")
