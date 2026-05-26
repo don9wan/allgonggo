@@ -94,14 +94,14 @@ async def crawl_groupby():
 
                 page_jobs = [j for item in items if (j := _parse_job(item, career_type)) is not None]
 
-                async with AsyncSessionLocal() as session:
-                    if await is_caught_up(session, page_jobs):
-                        break
-
                 for job in page_jobs:
                     if job.url not in seen_urls:
                         seen_urls.add(job.url)
                         all_jobs.append(job)
+
+                async with AsyncSessionLocal() as session:
+                    if await is_caught_up(session, page_jobs):
+                        break
 
                 offset += LIMIT
                 if offset >= total:
