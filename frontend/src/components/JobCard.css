@@ -235,6 +235,13 @@
   }
 }
 
+.search-highlight {
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 700;
+  font-style: normal;
+}
+
 /* ─── 스켈레톤 shimmer ───────────────────────────────── */
 @keyframes shimmer {
   from { background-position: -400px 0; }

@@ -24,3 +24,21 @@ export function relativeTime(dateStr: string): string {
   if (diffDays < 14) return "1주 전";
   return `${Math.floor(diffDays / 7)}주 전`;
 }
+
+export function splitHighlight(
+  text: string,
+  query: string
+): Array<{ part: string; match: boolean }> {
+  if (!query.trim()) return [{ part: text, match: false }];
+  const tokens = query
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (!tokens.length) return [{ part: text, match: false }];
+  const splitRegex = new RegExp(`(${tokens.join("|")})`, "gi");
+  const matchRegex = new RegExp(`^(${tokens.join("|")})$`, "i");
+  return text
+    .split(splitRegex)
+    .filter((p) => p.length > 0)
+    .map((part) => ({ part, match: matchRegex.test(part) }));
+}

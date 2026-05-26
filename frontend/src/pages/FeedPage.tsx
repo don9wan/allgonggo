@@ -92,7 +92,13 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
     <main className="feed-page">
       <div className="feed-page__inner">
         {total !== null && (
-          <p className="feed-page__count">공고 {total.toLocaleString()}건</p>
+          <p className="feed-page__count">
+            {filters.q ? (
+              <><span className="feed-page__count-query">'{filters.q}'</span> 결과 {total.toLocaleString()}건</>
+            ) : (
+              `공고 ${total.toLocaleString()}건`
+            )}
+          </p>
         )}
 
         {isError && (

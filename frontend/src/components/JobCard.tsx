@@ -1,7 +1,24 @@
 import { useState } from "react";
 import type { Job, CardStatus } from "../types/job";
 import { useJobStore } from "../store/jobStore";
-import { normalizeTitle, relativeTime } from "../utils/format";
+import { normalizeTitle, relativeTime, splitHighlight } from "../utils/format";
+
+function Hl({ text, query }: { text: string; query: string }) {
+  const parts = splitHighlight(text, query);
+  return (
+    <>
+      {parts.map(({ part, match }, i) =>
+        match ? (
+          <mark key={i} className="search-highlight">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
 
 export function JobCardSkeleton() {
   return (
@@ -41,6 +58,7 @@ const SOURCE_FAVICONS: Record<string, string> = {
 export function JobCard({ job, status, onSave, isLastSeen }: Props) {
   const markViewed = useJobStore((s) => s.markViewed);
   const hideJob = useJobStore((s) => s.hideJob);
+  const searchQuery = useJobStore((s) => s.filters.q);
   const [exiting, setExiting] = useState(false);
 
   const isViewed = status === "viewed" || status === "last_seen";
@@ -86,8 +104,12 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
       onClick={handleCardClick}
     >
       <div className="job-card__header">
-        <p className="job-card__company">{job.company}</p>
-        <h3 className="job-card__title">{normalizeTitle(job.title)}</h3>
+        <p className="job-card__company">
+          <Hl text={job.company} query={searchQuery} />
+        </p>
+        <h3 className="job-card__title">
+          <Hl text={normalizeTitle(job.title)} query={searchQuery} />
+        </h3>
       </div>
 
       {!isSmall && (

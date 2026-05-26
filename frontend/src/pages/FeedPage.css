@@ -14,6 +14,11 @@
   margin-bottom: 16px;
 }
 
+.feed-page__count-query {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
 .feed-page__list {
   display: flex;
   flex-direction: column;

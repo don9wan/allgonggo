@@ -10,14 +10,14 @@ const FILTER_CONFIGS = [
     options: [
       "서울", "경기", "인천", "부산", "대구", "대전",
       "광주", "울산", "세종", "강원", "충북", "충남",
-      "전북", "전남", "경북", "경남", "제주", "재택/원격",
+      "전북", "전남", "경북", "경남", "제주", "해외",
     ].map((l) => ({ value: l, label: l })),
     wide: true,
   },
   {
     key: "experience" as const,
     label: "경력",
-    options: ["신입", "경력무관"].map((e) => ({ value: e, label: e })),
+    options: ["신입", "경력무관", "신입/경력"].map((e) => ({ value: e, label: e })),
     wide: false,
   },
   {
