@@ -1,4 +1,5 @@
 import { useJobStore } from "../store/jobStore";
+import { normalizeTitle } from "../utils/format";
 import "./HiddenPanel.css";
 
 interface Props {
@@ -37,7 +38,7 @@ export function HiddenPanel({ onClose }: Props) {
                 <div key={job.id} className="hidden-card">
                   <div className="hidden-card__info">
                     <p className="hidden-card__company">{job.company}</p>
-                    <p className="hidden-card__title">{job.title}</p>
+                    <p className="hidden-card__title">{normalizeTitle(job.title)}</p>
                   </div>
                   <button
                     className="hidden-card__restore"

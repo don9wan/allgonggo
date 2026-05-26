@@ -1,5 +1,6 @@
 import type { SavedJob } from "../types/job";
 import { useJobStore } from "../store/jobStore";
+import { normalizeTitle } from "../utils/format";
 import "./SavedPanel.css";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -44,9 +45,9 @@ function SavedCard({ job, onReturn }: SavedCardProps) {
   return (
     <div className="saved-card" style={{ borderColor }}>
       <div className="saved-card__header">
-        <div>
+        <div className="saved-card__info">
           <p className="saved-card__company">{job.company}</p>
-          <h3 className="saved-card__title">{job.title}</h3>
+          <h3 className="saved-card__title">{normalizeTitle(job.title)}</h3>
         </div>
         <div className="saved-card__sources">
           {job.sources.map((src) => (
@@ -70,11 +71,13 @@ function SavedCard({ job, onReturn }: SavedCardProps) {
         </div>
       </div>
 
-      <div className="saved-card__meta">
-        {job.location && <span>{job.location}</span>}
-        {job.experience && <span>{job.experience}</span>}
-        {job.employment_type && <span>{job.employment_type}</span>}
-      </div>
+      {(job.location || job.experience || job.employment_type) && (
+        <div className="saved-card__meta">
+          {job.location && <span>{job.location}</span>}
+          {job.experience && <span>{job.experience}</span>}
+          {job.employment_type && <span>{job.employment_type}</span>}
+        </div>
+      )}
 
       <div className="saved-card__actions">
         <button
@@ -93,7 +96,7 @@ function SavedCard({ job, onReturn }: SavedCardProps) {
           className="saved-card__btn saved-card__btn--return"
           onClick={() => onReturn(job)}
         >
-          저장 취소
+          피드로 돌리기
         </button>
       </div>
     </div>

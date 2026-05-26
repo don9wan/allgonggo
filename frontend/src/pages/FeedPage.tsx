@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function FeedPage({ returnedJob, onClearReturned }: Props) {
-  const { filters, viewedIds, lastSeenId, hideViewed, savedJobs, saveJob, hiddenJobs } = useJobStore();
+  const { filters, viewedIds, lastSeenId, hideViewed, savedJobs, saveJob, hiddenJobs, resetFilters, toggleHideViewed } = useJobStore();
   const savedIds = new Set(savedJobs.map((j) => j.id));
   const hiddenIds = new Set(hiddenJobs.map((j) => j.id));
 
@@ -75,11 +75,24 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
     if (returnedJob?.id === job.id) onClearReturned();
   };
 
+  const hasActiveFilters =
+    !!filters.q ||
+    filters.location.length > 0 ||
+    filters.experience.length > 0 ||
+    filters.employment_type.length > 0 ||
+    filters.source.length > 0 ||
+    hideViewed;
+
+  const handleResetAll = () => {
+    resetFilters();
+    if (hideViewed) toggleHideViewed();
+  };
+
   return (
     <main className="feed-page">
       <div className="feed-page__inner">
         {total !== null && (
-          <p className="feed-page__count">최근 2주 내 올라온 공고 {total.toLocaleString()}건</p>
+          <p className="feed-page__count">공고 {total.toLocaleString()}건</p>
         )}
 
         {isError && (
@@ -109,6 +122,11 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
                 </svg>
                 <p>공고를 찾을 수 없습니다</p>
                 <span>검색어나 필터를 조정해보세요</span>
+                {hasActiveFilters && (
+                  <button className="feed-page__reset-btn" onClick={handleResetAll}>
+                    필터 초기화
+                  </button>
+                )}
               </div>
             )}
             {displayJobs.map((job) => {

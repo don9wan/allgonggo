@@ -41,6 +41,24 @@
   font-size: 14px;
 }
 
+.feed-page__reset-btn {
+  margin-top: 8px;
+  padding: 9px 20px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: white;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.feed-page__reset-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .feed-page__spinner {
   display: flex;
   justify-content: center;

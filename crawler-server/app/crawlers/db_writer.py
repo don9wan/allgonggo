@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
@@ -11,15 +12,44 @@ from app.models.job import Job, JobSource
 
 logger = logging.getLogger(__name__)
 
-SIMILARITY_THRESHOLD = 0.8
+SIMILARITY_THRESHOLD = 0.75
 CATCHUP_RATIO = 0.70
 _URL_CHUNK = 500
+
+# 플랫폼별 제목 노이즈 패턴: [회사명], [신입], [정규직], 연도, 상/하반기 등
+_RE_BRACKET = re.compile(r'\[.*?\]')
+_RE_YEAR = re.compile(r'20\d{2}년도?')
+_RE_HALF = re.compile(r'[상하]반기')
+_RE_WS = re.compile(r'\s+')
+
+# 이 단어들만 남은 경우 cross-source merge 신뢰 불가
+_GENERIC_TITLES = {
+    '집중채용', '수시채용', '공개채용', '공채', '채용', '채용공고',
+    '신입채용', '경력채용', '신입/경력채용', '신입/경력 채용',
+}
+_MIN_NORM_LEN = 5  # 정규화 후 이 길이 미만이면 merge 대상에서 제외
+
+
+def _normalize_title(title: str) -> str:
+    """플랫폼별 접두사·연도·채용시즌 표현 제거 후 소문자 정규화."""
+    t = _RE_BRACKET.sub(' ', title)
+    t = _RE_YEAR.sub(' ', t)
+    t = _RE_HALF.sub(' ', t)
+    t = _RE_WS.sub(' ', t)
+    return t.strip().lower()
+
+
+def _is_matchable(norm: str) -> bool:
+    """정규화된 타이틀이 cross-source 매칭에 충분히 구체적인지 판단."""
+    if len(norm) < _MIN_NORM_LEN:
+        return False
+    return norm not in _GENERIC_TITLES
 
 
 def _trigram_sim(a: str, b: str) -> float:
     """PostgreSQL pg_trgm similarity 동일 알고리즘을 Python으로 구현. DB round-trip 없이 계산."""
     def trigrams(s: str) -> set:
-        s = f"  {s.lower()}  "
+        s = f"  {s}  "
         return {s[i:i+3] for i in range(len(s) - 2)}
     ta, tb = trigrams(a), trigrams(b)
     if not ta and not tb:
@@ -119,7 +149,9 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
 
     jobs_by_company: dict[str, list] = {}
     for row in existing_jobs_rows:
-        jobs_by_company.setdefault(row.company.lower(), []).append(row)
+        jobs_by_company.setdefault(row.company.lower(), []).append(
+            (row, _normalize_title(row.title))
+        )
 
     existing_source_keys: set[tuple] = {
         (str(row[0]), row[1])
@@ -144,12 +176,14 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
         existing_urls.add(raw.url)
 
         candidates = jobs_by_company.get(raw.company.lower(), [])
+        norm_raw = _normalize_title(raw.title)
 
         matched_job = None
-        for candidate in candidates:
-            if _trigram_sim(raw.title, candidate.title) >= SIMILARITY_THRESHOLD:
-                matched_job = candidate
-                break
+        if _is_matchable(norm_raw):
+            for candidate_row, norm_candidate in candidates:
+                if _is_matchable(norm_candidate) and _trigram_sim(norm_raw, norm_candidate) >= SIMILARITY_THRESHOLD:
+                    matched_job = candidate_row
+                    break
 
         if matched_job:
             key = (str(matched_job.id), raw.source)
@@ -177,7 +211,9 @@ async def upsert_jobs(session: AsyncSession, raw_jobs: List[RawJob]) -> Tuple[in
             )
             session.add(new_job)
             session.add(JobSource(job_id=new_id, source=raw.source, url=raw.url))
-            jobs_by_company.setdefault(raw.company.lower(), []).append(new_job)
+            jobs_by_company.setdefault(raw.company.lower(), []).append(
+                (new_job, norm_raw)
+            )
             inserted += 1
 
         if (i + 1) % BATCH_SIZE == 0:

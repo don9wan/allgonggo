@@ -17,7 +17,7 @@ const FILTER_CONFIGS = [
   {
     key: "experience" as const,
     label: "경력",
-    options: ["신입", "인턴", "경력무관"].map((e) => ({ value: e, label: e })),
+    options: ["신입", "경력무관"].map((e) => ({ value: e, label: e })),
     wide: false,
   },
   {
