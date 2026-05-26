@@ -82,7 +82,7 @@ async def run_all_crawlers():
     logger.info("크롤링 전체 시작 — DB 연결 확인 중...")
     logger.info("=" * 60)
 
-    if not await _wait_for_db(timeout=300):
+    if not await _wait_for_db(timeout=1200):
         logger.error("크롤링 취소: DB 연결 불가")
         return
 
@@ -108,7 +108,7 @@ async def run_all_crawlers():
                 if is_db_err:
                     # DB 오류는 브라우저 재시작 없이 DB 복구 대기 후 재시도
                     logger.warning(f"└─ [{name}] DB 오류 — 복구 대기: {e}")
-                    if await _wait_for_db(timeout=300):
+                    if await _wait_for_db(timeout=1200):
                         logger.info(f"[{name}] DB 복구 확인 — 재시도")
                         continue
                     else:
