@@ -69,7 +69,7 @@ async def crawl_catch():
         context = await browser.new_context()
         page = await context.new_page()
         # 쿠키 획득
-        await page.goto(BASE_URL, wait_until="networkidle")
+        await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
         await random_delay()
 
         headers = {
