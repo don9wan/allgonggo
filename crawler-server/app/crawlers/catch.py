@@ -92,6 +92,14 @@ async def crawl_catch():
                 )
                 try:
                     resp = await context.request.get(url, headers=headers)
+                    body = await resp.body()
+                    status = resp.status
+                    if status != 200 or not body:
+                        logger.error(
+                            f"캐치 [{career_label}] page={page_num} HTTP {status} "
+                            f"body={body[:200] if body else '(empty)'}"
+                        )
+                        break
                     data = await resp.json()
                 except Exception as e:
                     logger.error(f"캐치 [{career_label}] page={page_num} 요청 실패: {e}")
