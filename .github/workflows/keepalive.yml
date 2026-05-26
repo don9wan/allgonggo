@@ -1,25 +1,38 @@
-name: Railway Keepalive
+name: Railway Crawler Trigger
 
 on:
   schedule:
-    # 매 5분마다 실행 (GitHub Actions 최소 단위)
-    # Railway free tier는 30분 비활성 시 sleep → 5분 ping으로 방지
-    - cron: '*/5 * * * *'
+    # 평일(월-금) 10/12/14/16/18/20시 KST = UTC 01/03/05/07/09/11시
+    - cron: '5 1,3,5,7,9,11 * * 1-5'
   workflow_dispatch:
+    inputs:
+      reason:
+        description: '수동 실행 사유'
+        required: false
+        default: '수동 트리거'
 
 jobs:
-  ping:
+  trigger-crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
     steps:
-      - name: Ping Railway crawler service
+      - name: Wake Railway service (cold start 대기)
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
-            https://acceptable-youth-production.up.railway.app/health)
-          echo "HTTP $STATUS"
-          if [ "$STATUS" = "200" ]; then
-            echo "✓ Railway service alive"
-          else
-            echo "⚠ Railway unresponsive (status: $STATUS)"
-            exit 1
-          fi
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+              https://acceptable-youth-production.up.railway.app/health)
+            echo "Health check attempt $i: HTTP $STATUS"
+            [ "$STATUS" = "200" ] && break
+            echo "Sleeping 15s before retry..."
+            sleep 15
+          done
+          [ "$STATUS" = "200" ] || (echo "Service unresponsive" && exit 1)
+
+      - name: Trigger crawling
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            -X POST \
+            -H "X-Trigger-Token: ${{ secrets.CRAWL_SECRET }}" \
+            https://acceptable-youth-production.up.railway.app/trigger)
+          echo "Trigger response: HTTP $STATUS"
+          [ "$STATUS" = "200" ] && echo "✓ 크롤링 트리거 성공" || (echo "✗ 트리거 실패: $STATUS" && exit 1)

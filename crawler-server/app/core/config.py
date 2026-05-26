@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/allgonggo"
     ENVIRONMENT: str = "development"
     ADMIN_KEY: str = "dev-key"
+    CRAWL_SECRET: str = ""  # GitHub Actions 트리거용 시크릿 (Railway 환경변수로 설정)
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
