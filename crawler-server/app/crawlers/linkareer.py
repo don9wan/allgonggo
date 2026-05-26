@@ -116,7 +116,7 @@ def _parse_activity(activity: dict, apollo: dict) -> Optional[RawJob]:
             location=location,
             experience=experience,
             employment_type=employment_type,
-            raw_text=f"{title} {company} {' '.join(cat_names)}".strip(),
+            raw_text=f"{title} {company}".strip(),
         )
     except Exception as e:
         logger.warning(f"링커리어 activity 파싱 오류: {e}")
