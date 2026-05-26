@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -37,6 +38,24 @@ async def _db_keepalive():
             await session.execute(text("SELECT 1"))
     except Exception as e:
         logger.warning(f"[keepalive] DB ping 실패: {e}")
+
+
+async def _self_ping():
+    """Railway 컨테이너 슬립 방지용 자가 HTTP ping.
+    RAILWAY_PUBLIC_DOMAIN 환경변수가 없으면(로컬 실행) 무시.
+    외부 인바운드 요청처럼 처리되어 Railway가 서비스를 깨워 둠.
+    """
+    domain = os.getenv("RAILWAY_PUBLIC_DOMAIN")
+    if not domain:
+        return
+    import aiohttp
+    url = f"https://{domain}/health"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)):
+                pass
+    except Exception as e:
+        logger.warning(f"[self-ping] 실패: {e}")
 
 
 SOURCES = ["wanted", "linkareer", "jasoseol", "catch", "groupby"]
@@ -89,6 +108,15 @@ def start_scheduler() -> AsyncIOScheduler:
         max_instances=1,
     )
 
+    # Railway 컨테이너 슬립 방지 — 4분마다 자가 HTTP ping
+    scheduler.add_job(
+        _self_ping,
+        "interval",
+        minutes=4,
+        id="self_ping",
+        max_instances=1,
+    )
+
     # 평일(월-금) 10/12/14/16/18/20시 크롤링
     scheduler.add_job(
         run_all_crawlers,
@@ -108,5 +136,5 @@ def start_scheduler() -> AsyncIOScheduler:
     )
 
     scheduler.start()
-    logger.info("스케줄러 시작됨 (평일 10/12/14/16/18/20시 크롤링 / 매주 월 09:00 정리)")
+    logger.info("스케줄러 시작됨 (평일 10/12/14/16/18/20시 크롤링 / 매주 월 09:00 정리 / 4분마다 self-ping)")
     return scheduler
