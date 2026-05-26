@@ -68,8 +68,13 @@ async def crawl_catch():
     try:
         context = await browser.new_context()
         page = await context.new_page()
-        # 쿠키 획득
-        await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+        # 쿠키 획득: load 이벤트까지 대기 (networkidle은 catch.co.kr에서 Page crashed 유발)
+        try:
+            await page.goto(BASE_URL, wait_until="load", timeout=45000)
+        except Exception:
+            # load 타임아웃도 괜찮음 — 쿠키는 이미 세팅됨
+            pass
+        await page.wait_for_timeout(2000)  # JS 초기화 대기
         await random_delay()
 
         headers = {
