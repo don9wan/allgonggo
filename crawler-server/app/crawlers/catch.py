@@ -95,11 +95,20 @@ async def crawl_catch():
         page = await context.new_page()
 
         # 메인 페이지 로드 → Cloudflare 챌린지 통과 + 쿠키 획득
+        # Cloudflare JS 챌린지는 load 이벤트 이후에 실행되므로 충분히 대기
         try:
             await page.goto(BASE_URL, wait_until="load", timeout=45000)
         except Exception:
-            pass  # load 타임아웃 무시 — 쿠키는 이미 세팅됨
-        await page.wait_for_timeout(2000)
+            pass
+        # CF 챌린지 해결까지 대기 (Just a moment... 타이틀이 사라질 때까지)
+        try:
+            await page.wait_for_function(
+                "() => document.title !== 'Just a moment...'",
+                timeout=20000,
+            )
+            logger.info("캐치 Cloudflare 챌린지 통과")
+        except Exception:
+            logger.warning("캐치 Cloudflare 챌린지 대기 타임아웃 — 계속 진행")
         await random_delay()
 
         for career_val, career_label in CAREER_PARAMS.items():

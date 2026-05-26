@@ -130,7 +130,9 @@ async def _crawl_url_template(page, url_template: str, label: str) -> List[RawJo
     while True:
         url = url_template.format(page=page_num)
         try:
-            await page.goto(url, wait_until="load", timeout=45000)
+            # domcontentloaded: Next.js SSR 페이지는 초기 HTML에 __NEXT_DATA__ 포함
+            # load/networkidle은 무거운 JS로 Page crashed 유발
+            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         except Exception as e:
             logger.error(f"링커리어 [{label}] 페이지 {page_num} 로드 실패: {e}")
             break
