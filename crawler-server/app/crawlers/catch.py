@@ -59,6 +59,31 @@ def _parse_job(item: dict) -> RawJob | None:
         return None
 
 
+async def _fetch_via_page(page, url: str) -> dict | None:
+    """Cloudflare 우회: 브라우저 컨텍스트 내 fetch로 API 호출."""
+    try:
+        result = await page.evaluate(
+            """async (url) => {
+                const resp = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                    },
+                    credentials: 'include',
+                });
+                if (!resp.ok) return { __error__: resp.status };
+                return await resp.json();
+            }""",
+            url,
+        )
+        if isinstance(result, dict) and "__error__" in result:
+            logger.error(f"캐치 API fetch 오류: HTTP {result['__error__']}")
+            return None
+        return result
+    except Exception as e:
+        logger.error(f"캐치 API evaluate 실패: {e}")
+        return None
+
+
 async def crawl_catch():
     logger.info("캐치 크롤링 시작")
     all_jobs: List[RawJob] = []
@@ -68,41 +93,26 @@ async def crawl_catch():
     try:
         context = await browser.new_context()
         page = await context.new_page()
-        # 쿠키 획득: load 이벤트까지 대기 (networkidle은 catch.co.kr에서 Page crashed 유발)
+
+        # 메인 페이지 로드 → Cloudflare 챌린지 통과 + 쿠키 획득
         try:
             await page.goto(BASE_URL, wait_until="load", timeout=45000)
         except Exception:
-            # load 타임아웃도 괜찮음 — 쿠키는 이미 세팅됨
-            pass
-        await page.wait_for_timeout(2000)  # JS 초기화 대기
+            pass  # load 타임아웃 무시 — 쿠키는 이미 세팅됨
+        await page.wait_for_timeout(2000)
         await random_delay()
-
-        headers = {
-            "Accept": "application/json, text/plain, */*",
-            "Referer": BASE_URL,
-        }
 
         for career_val, career_label in CAREER_PARAMS.items():
             page_num = 1
             while True:
-                url = (
+                api_url = (
                     f"{API_URL}?Keyword=&Sido=&Career={career_val}"
                     f"&Sort=0&curpage={page_num}&pageSize={PAGE_SIZE}"
                     f"&onRecruitYN=Y&ExceptIDList="
                 )
-                try:
-                    resp = await context.request.get(url, headers=headers)
-                    body = await resp.body()
-                    status = resp.status
-                    if status != 200 or not body:
-                        logger.error(
-                            f"캐치 [{career_label}] page={page_num} HTTP {status} "
-                            f"body={body[:200] if body else '(empty)'}"
-                        )
-                        break
-                    data = await resp.json()
-                except Exception as e:
-                    logger.error(f"캐치 [{career_label}] page={page_num} 요청 실패: {e}")
+
+                data = await _fetch_via_page(page, api_url)
+                if data is None:
                     break
 
                 total = data.get("intTotalRecordCount", 0)
