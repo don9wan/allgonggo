@@ -32,10 +32,9 @@ async def trigger_crawl(
     background_tasks: BackgroundTasks,
     x_trigger_token: str = Header(None),
 ):
-    """GitHub Actions 등 외부 스케줄러에서 크롤링을 직접 트리거하는 엔드포인트.
-    CRAWL_SECRET 환경변수가 설정된 경우 토큰 검증 필수.
-    """
-    if settings.CRAWL_SECRET and x_trigger_token != settings.CRAWL_SECRET:
+    """GitHub Actions 등 외부 스케줄러에서 크롤링을 직접 트리거하는 엔드포인트."""
+    valid_tokens = {t for t in [settings.CRAWL_SECRET, settings.ADMIN_KEY] if t}
+    if valid_tokens and x_trigger_token not in valid_tokens:
         raise HTTPException(status_code=403, detail="Invalid trigger token")
 
     background_tasks.add_task(run_all_crawlers)
