@@ -52,7 +52,7 @@ def _parse_job(item: dict) -> RawJob | None:
             location=location,
             experience=career,
             employment_type=emp_type,
-            raw_text=f"{title} {company} {depth}".strip(),
+            raw_text=f"{title} {company}".strip(),
         )
     except Exception as e:
         logger.warning(f"캐치 파싱 오류: {e}")
