@@ -171,10 +171,14 @@ async def crawl_linkareer():
     browser = await launch_browser()
     try:
         context = await browser.new_context()
-        page = await context.new_page()
-        recruit_jobs = await _crawl_url_template(page, RECRUIT_BASE, "신입/계약")
+        # 카테고리마다 새 페이지 생성 — 메모리 누적으로 인한 Page crashed 방지
+        page1 = await context.new_page()
+        recruit_jobs = await _crawl_url_template(page1, RECRUIT_BASE, "신입/계약")
+        await page1.close()
         await random_delay()
-        intern_jobs = await _crawl_url_template(page, INTERN_BASE, "인턴")
+        page2 = await context.new_page()
+        intern_jobs = await _crawl_url_template(page2, INTERN_BASE, "인턴")
+        await page2.close()
     finally:
         await browser.close()
 
