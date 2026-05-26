@@ -1,0 +1,25 @@
+name: Railway Keepalive
+
+on:
+  schedule:
+    # 매 5분마다 실행 (GitHub Actions 최소 단위)
+    # Railway free tier는 30분 비활성 시 sleep → 5분 ping으로 방지
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping Railway crawler service
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+            https://acceptable-youth-production.up.railway.app/health)
+          echo "HTTP $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✓ Railway service alive"
+          else
+            echo "⚠ Railway unresponsive (status: $STATUS)"
+            exit 1
+          fi
