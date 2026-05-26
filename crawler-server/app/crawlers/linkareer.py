@@ -3,8 +3,10 @@ import logging
 import re
 from typing import List, Optional
 
+import aiohttp
+
 from app.crawlers.base import RawJob
-from app.crawlers.browser import launch_browser, random_delay
+from app.crawlers.browser import random_delay
 from app.crawlers.db_writer import is_caught_up, upsert_jobs
 from app.db.database import AsyncSessionLocal
 
@@ -29,6 +31,18 @@ INTERN_BASE = (
 )
 
 PAGE_SIZE = 20
+
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://linkareer.com/",
+}
 
 
 def _extract_next_data(html: str) -> Optional[dict]:
@@ -77,7 +91,6 @@ def _parse_activity(activity: dict, apollo: dict) -> Optional[RawJob]:
         if not title or not company or not act_id:
             return None
 
-        # 지역
         location_parts = []
         for regions_key, obj_list in [("regions", activity.get("regions", [])), ("regionDistricts", activity.get("regionDistricts", []))]:
             if obj_list and isinstance(obj_list[0], dict):
@@ -87,7 +100,6 @@ def _parse_activity(activity: dict, apollo: dict) -> Optional[RawJob]:
                     location_parts.append(name)
         location = " ".join(location_parts) or None
 
-        # 경력
         job_types = activity.get("jobTypes", [])
         if "NEW" in job_types:
             experience = "신입"
@@ -99,14 +111,6 @@ def _parse_activity(activity: dict, apollo: dict) -> Optional[RawJob]:
             experience = None
 
         employment_type = "인턴" if ("INTERN" in job_types and "NEW" not in job_types) else "정규직"
-
-        cat_names = []
-        for cat_ref_obj in activity.get("categories", []):
-            if isinstance(cat_ref_obj, dict):
-                cat_obj = apollo.get(cat_ref_obj.get("__ref", ""), {})
-                name = cat_obj.get("name", "")
-                if name:
-                    cat_names.append(name)
 
         return RawJob(
             title=title,
@@ -123,21 +127,23 @@ def _parse_activity(activity: dict, apollo: dict) -> Optional[RawJob]:
         return None
 
 
-async def _crawl_url_template(page, url_template: str, label: str) -> List[RawJob]:
+async def _crawl_url_template(http: aiohttp.ClientSession, url_template: str, label: str) -> List[RawJob]:
     results: List[RawJob] = []
     page_num = 1
 
     while True:
         url = url_template.format(page=page_num)
         try:
-            # domcontentloaded: Next.js SSR 페이지는 초기 HTML에 __NEXT_DATA__ 포함
-            # load/networkidle은 무거운 JS로 Page crashed 유발
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            async with http.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                if resp.status != 200:
+                    logger.error(f"링커리어 [{label}] 페이지 {page_num} HTTP {resp.status}")
+                    break
+                html = await resp.text()
         except Exception as e:
             logger.error(f"링커리어 [{label}] 페이지 {page_num} 로드 실패: {e}")
             break
 
-        next_data = _extract_next_data(await page.content())
+        next_data = _extract_next_data(html)
         if not next_data:
             logger.warning(f"링커리어 [{label}] 페이지 {page_num} __NEXT_DATA__ 없음")
             break
@@ -168,19 +174,10 @@ async def _crawl_url_template(page, url_template: str, label: str) -> List[RawJo
 async def crawl_linkareer():
     logger.info("링커리어 크롤링 시작")
 
-    browser = await launch_browser()
-    try:
-        context = await browser.new_context()
-        # 카테고리마다 새 페이지 생성 — 메모리 누적으로 인한 Page crashed 방지
-        page1 = await context.new_page()
-        recruit_jobs = await _crawl_url_template(page1, RECRUIT_BASE, "신입/계약")
-        await page1.close()
+    async with aiohttp.ClientSession(headers=_HEADERS) as http:
+        recruit_jobs = await _crawl_url_template(http, RECRUIT_BASE, "신입/계약")
         await random_delay()
-        page2 = await context.new_page()
-        intern_jobs = await _crawl_url_template(page2, INTERN_BASE, "인턴")
-        await page2.close()
-    finally:
-        await browser.close()
+        intern_jobs = await _crawl_url_template(http, INTERN_BASE, "인턴")
 
     seen_urls: set = set()
     all_jobs: List[RawJob] = []
