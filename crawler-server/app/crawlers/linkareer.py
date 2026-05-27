@@ -32,41 +32,6 @@ INTERN_BASE = (
 
 PAGE_SIZE = 20
 
-# 링커리어 서버가 categoryIDs 필터를 완전히 적용하지 않으므로 클라이언트에서 재검증.
-# 상위 카테고리 ID 화이트리스트 — 이 중 하나도 없는 공고는 버림.
-_ALLOWED_CATEGORY_IDS = {
-    53,   # 경영/사무
-    54,   # 마케팅/광고/홍보
-    58,   # IT/인터넷
-    63,   # 디자인
-    74,   # 기획/전략/경영
-    75,   # 사무/총무/법무
-    76,   # 인사/노무/교육
-    77,   # 경리/회계/결산
-    78,   # 재무/세무/IR
-    81,   # 마케팅/PR/분석
-    108,  # 웹개발
-    109,  # 응용프로그램개발
-    110,  # ERP/시스템개발
-    111,  # 네트워크/서버/보안
-    112,  # DBA/데이터베이스
-    113,  # 콘텐츠/사이트운영
-    114,  # 웹기획/PM
-    115,  # HTML/퍼블리싱
-    116,  # QA
-    117,  # 게임
-    160,  # 그래픽디자인
-    161,  # 출판/편집디자인
-    162,  # 제품/산업디자인
-    163,  # 캐릭터/만화
-    164,  # 의류/패션/잡화디자인
-    165,  # 전시/공간디자인
-    166,  # 광고/시각디자인
-    180,  # 사업기획
-    181,  # 서비스기획/운영
-    182,  # 신규사업/BD
-}
-
 _HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -146,18 +111,6 @@ def _parse_activity(activity: dict, apollo: dict) -> Optional[RawJob]:
             experience = None
 
         employment_type = "인턴" if ("INTERN" in job_types and "NEW" not in job_types) else "정규직"
-
-        # 링커리어 서버 필터가 불완전하므로 카테고리를 직접 검증
-        cat_ids = set()
-        for cat_ref_obj in activity.get("categories", []):
-            if isinstance(cat_ref_obj, dict):
-                ref = cat_ref_obj.get("__ref", "")
-                cat_id = apollo.get(ref, {}).get("id")
-                if cat_id is not None:
-                    cat_ids.add(int(cat_id))
-
-        if not cat_ids.intersection(_ALLOWED_CATEGORY_IDS):
-            return None
 
         return RawJob(
             title=title,
