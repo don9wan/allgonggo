@@ -169,7 +169,7 @@
   top: 50%;
   pointer-events: none;
   font-size: 14px;
-  color: var(--color-text-placeholder, #c0c0c0);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   max-width: calc(100% - 50px);
