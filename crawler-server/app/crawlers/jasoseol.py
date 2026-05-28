@@ -75,7 +75,7 @@ def _parse_job(item: dict) -> Optional[RawJob]:
             location=None,
             experience=experience,
             employment_type=employment_type,
-            raw_text=f"{title} {company} {' '.join(field_texts)}".strip(),
+            raw_text=f"{title} {company}".strip(),
         )
     except Exception as e:
         logger.warning(f"자소설닷컴 파싱 오류: {e}")
