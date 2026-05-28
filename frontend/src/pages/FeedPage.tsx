@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchJobs } from "../api/jobs";
 import { JobCard, JobCardSkeleton } from "../components/JobCard";
 import { useJobStore } from "../store/jobStore";
 import type { Job, CardStatus, SavedJob } from "../types/job";
+import { trackFeedNextPage } from "../lib/analytics";
 import "./FeedPage.css";
 
 interface Props {
@@ -33,18 +34,24 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
   const total = data?.pages[0]?.total ?? null;
   const isInitialLoading = isFetching && allJobs.length === 0;
 
+  const handleLoadMore = useCallback(() => {
+    const nextPageNum = (data?.pages.length ?? 0) + 1;
+    trackFeedNextPage(nextPageNum);
+    fetchNextPage();
+  }, [data?.pages.length, fetchNextPage]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+          handleLoadMore();
         }
       },
       { threshold: 0.1 }
     );
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, handleLoadMore]);
 
   const displayJobs = useMemo(() => {
     let jobs = allJobs.filter((j) => !savedIds.has(j.id) && !hiddenIds.has(j.id));
@@ -135,7 +142,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
                 )}
               </div>
             )}
-            {displayJobs.map((job) => {
+            {displayJobs.map((job, i) => {
               const status = getStatus(job);
               return (
                 <JobCard
@@ -144,6 +151,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
                   status={status}
                   isLastSeen={job.id === lastSeenId}
                   onSave={handleSave}
+                  index={i}
                 />
               );
             })}

@@ -1,6 +1,7 @@
 import type { SavedJob } from "../types/job";
 import { useJobStore } from "../store/jobStore";
 import { normalizeTitle } from "../utils/format";
+import { trackSavedJobStatusChanged, trackSavedJobReturnedToFeed } from "../lib/analytics";
 import "./SavedPanel.css";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -35,11 +36,9 @@ function SavedCard({ job, onReturn }: SavedCardProps) {
       : "var(--color-border)";
 
   const toggleStatus = (status: "applied" | "rejected") => {
-    if (job.status === status) {
-      setJobStatus(job.id, "saved");
-    } else {
-      setJobStatus(job.id, status);
-    }
+    const newStatus = job.status === status ? "saved" : status;
+    trackSavedJobStatusChanged({ job_id: job.id, company: job.company, from_status: job.status, to_status: newStatus });
+    setJobStatus(job.id, newStatus);
   };
 
   return (
@@ -94,7 +93,10 @@ function SavedCard({ job, onReturn }: SavedCardProps) {
         </button>
         <button
           className="saved-card__btn saved-card__btn--return"
-          onClick={() => onReturn(job)}
+          onClick={() => {
+            trackSavedJobReturnedToFeed({ job_id: job.id, company: job.company, had_status: job.status });
+            onReturn(job);
+          }}
         >
           피드로 돌리기
         </button>

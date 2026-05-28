@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Job, CardStatus } from "../types/job";
 import { useJobStore } from "../store/jobStore";
 import { normalizeTitle, relativeTime, splitHighlight } from "../utils/format";
+import { trackJobClicked, trackJobSaved, trackJobHidden } from "../lib/analytics";
 
 function Hl({ text, query }: { text: string; query: string }) {
   const parts = splitHighlight(text, query);
@@ -37,6 +38,7 @@ interface Props {
   status: CardStatus;
   onSave?: (job: Job) => void;
   isLastSeen: boolean;
+  index: number;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -55,10 +57,13 @@ const SOURCE_FAVICONS: Record<string, string> = {
   groupby: "https://groupby.kr/favicon.png",
 };
 
-export function JobCard({ job, status, onSave, isLastSeen }: Props) {
+export function JobCard({ job, status, onSave, isLastSeen, index }: Props) {
   const markViewed = useJobStore((s) => s.markViewed);
   const hideJob = useJobStore((s) => s.hideJob);
-  const searchQuery = useJobStore((s) => s.filters.q);
+  const filters = useJobStore((s) => s.filters);
+  const hideViewed = useJobStore((s) => s.hideViewed);
+  const savedJobs = useJobStore((s) => s.savedJobs);
+  const hiddenJobs = useJobStore((s) => s.hiddenJobs);
   const [exiting, setExiting] = useState(false);
 
   const isViewed = status === "viewed" || status === "last_seen";
@@ -71,14 +76,49 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
     return "var(--color-border)";
   })();
 
+  const getActiveFilters = () => [
+    ...(filters.location.length > 0 ? ["location"] : []),
+    ...(filters.experience.length > 0 ? ["experience"] : []),
+    ...(filters.employment_type.length > 0 ? ["employment_type"] : []),
+    ...(filters.source.length > 0 ? ["source"] : []),
+    ...(hideViewed ? ["hide_viewed"] : []),
+  ];
+
   const handleCardClick = () => {
     if (job.sources.length === 0) return;
-    window.open(job.sources[0].url, "_blank", "noopener,noreferrer");
+    const src = job.sources[0];
+    trackJobClicked({
+      job_id: job.id,
+      company: job.company,
+      title: job.title,
+      clicked_source: src.source,
+      sources_count: job.sources.length,
+      click_type: "card",
+      job_status: status,
+      position_in_feed: index,
+      has_search: filters.q.length > 0,
+      search_query: filters.q,
+      active_filters: getActiveFilters(),
+    });
+    window.open(src.url, "_blank", "noopener,noreferrer");
     markViewed(job.id);
   };
 
-  const handleSourceClick = (e: React.MouseEvent, url: string) => {
+  const handleSourceClick = (e: React.MouseEvent, url: string, source: string) => {
     e.stopPropagation();
+    trackJobClicked({
+      job_id: job.id,
+      company: job.company,
+      title: job.title,
+      clicked_source: source,
+      sources_count: job.sources.length,
+      click_type: "source_icon",
+      job_status: status,
+      position_in_feed: index,
+      has_search: filters.q.length > 0,
+      search_query: filters.q,
+      active_filters: getActiveFilters(),
+    });
     window.open(url, "_blank", "noopener,noreferrer");
     markViewed(job.id);
   };
@@ -86,12 +126,31 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onSave) return;
+    trackJobSaved({
+      job_id: job.id,
+      company: job.company,
+      title: job.title,
+      sources: job.sources.map((s) => s.source),
+      job_status: status,
+      position_in_feed: index,
+      has_search: filters.q.length > 0,
+      search_query: filters.q,
+      active_filters: getActiveFilters(),
+      total_saved_after: savedJobs.length + 1,
+    });
     setExiting(true);
     setTimeout(() => onSave(job), 300);
   };
 
   const handleHide = (e: React.MouseEvent) => {
     e.stopPropagation();
+    trackJobHidden({
+      job_id: job.id,
+      company: job.company,
+      job_status: status,
+      position_in_feed: index,
+      total_hidden_after: hiddenJobs.length + 1,
+    });
     setExiting(true);
     setTimeout(() => hideJob(job), 300);
   };
@@ -105,10 +164,10 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
     >
       <div className="job-card__header">
         <p className="job-card__company">
-          <Hl text={job.company} query={searchQuery} />
+          <Hl text={job.company} query={filters.q} />
         </p>
         <h3 className="job-card__title">
-          <Hl text={normalizeTitle(job.title)} query={searchQuery} />
+          <Hl text={normalizeTitle(job.title)} query={filters.q} />
         </h3>
       </div>
 
@@ -127,7 +186,7 @@ export function JobCard({ job, status, onSave, isLastSeen }: Props) {
               <button
                 key={src.id}
                 className="job-card__source-btn"
-                onClick={(e) => handleSourceClick(e, src.url)}
+                onClick={(e) => handleSourceClick(e, src.url, src.source)}
                 title={SOURCE_LABELS[src.source] || src.source}
               >
                 <img

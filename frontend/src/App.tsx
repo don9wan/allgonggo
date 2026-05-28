@@ -8,6 +8,7 @@ import { SavedPanel } from "./components/SavedPanel";
 import { HiddenPanel } from "./components/HiddenPanel";
 import { useJobStore } from "./store/jobStore";
 import type { SavedJob } from "./types/job";
+import { trackSessionStart, trackSavedPanelOpened, trackHiddenPanelOpened } from "./lib/analytics";
 import "./components/JobCard.css";
 import "./App.css";
 
@@ -53,17 +54,35 @@ function ScrollToTopButton() {
 }
 
 function AppInner() {
-  const { filters, setFilters, unsaveJob } = useJobStore();
+  const { filters, setFilters, unsaveJob, savedJobs, hiddenJobs } = useJobStore();
   const [showSaved, setShowSaved] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [returnedJob, setReturnedJob] = useState<SavedJob | null>(null);
   const hash = useHash();
+
+  useEffect(() => {
+    trackSessionStart();
+  }, []);
 
   const handleReturnToFeed = useCallback((job: SavedJob) => {
     unsaveJob(job.id);
     setReturnedJob(job);
     setShowSaved(false);
   }, [unsaveJob]);
+
+  const handleOpenSaved = useCallback(() => {
+    trackSavedPanelOpened({
+      saved_count: savedJobs.length,
+      applied_count: savedJobs.filter((j) => j.status === "applied").length,
+      rejected_count: savedJobs.filter((j) => j.status === "rejected").length,
+    });
+    setShowSaved(true);
+  }, [savedJobs]);
+
+  const handleOpenHidden = useCallback(() => {
+    trackHiddenPanelOpened(hiddenJobs.length);
+    setShowHidden(true);
+  }, [hiddenJobs]);
 
   if (hash === "#admin") {
     return <AdminPage />;
@@ -73,8 +92,8 @@ function AppInner() {
     <>
       <div className="app-header">
         <Navbar
-          onOpenSaved={() => setShowSaved(true)}
-          onOpenHidden={() => setShowHidden(true)}
+          onOpenSaved={handleOpenSaved}
+          onOpenHidden={handleOpenHidden}
           searchValue={filters.q}
           onSearchChange={(v) => setFilters({ q: v })}
         />

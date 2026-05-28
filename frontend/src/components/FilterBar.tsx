@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useJobStore } from "../store/jobStore";
+import { trackFilterApplied, trackHideViewedToggled, trackFilterReset } from "../lib/analytics";
 import "./FilterBar.css";
 
 const FILTER_CONFIGS = [
@@ -210,7 +211,19 @@ export function FilterBar() {
             label={config.label}
             options={config.options}
             selected={getSelected(config.key)}
-            onChange={(v) => setFilters({ [config.key]: v })}
+            onChange={(newValues) => {
+              const prev = getSelected(config.key);
+              if (newValues.length === 0) {
+                trackFilterApplied({ filter_type: config.key, action: "clear_all", changed_value: "", selected_count: 0 });
+              } else if (newValues.length > prev.length) {
+                const added = newValues.find((v) => !prev.includes(v)) ?? "";
+                trackFilterApplied({ filter_type: config.key, action: "add", changed_value: added, selected_count: newValues.length });
+              } else {
+                const removed = prev.find((v) => !newValues.includes(v)) ?? "";
+                trackFilterApplied({ filter_type: config.key, action: "remove", changed_value: removed, selected_count: newValues.length });
+              }
+              setFilters({ [config.key]: newValues });
+            }}
             isOpen={openKey === config.key}
             onToggle={() =>
               setOpenKey((prev) => (prev === config.key ? null : config.key))
@@ -220,7 +233,10 @@ export function FilterBar() {
         ))}
         <button
           className={`filter-btn filter-btn--toggle${hideViewed ? " filter-btn--active" : ""}`}
-          onClick={toggleHideViewed}
+          onClick={() => {
+            trackHideViewedToggled(!hideViewed);
+            toggleHideViewed();
+          }}
         >
           <span className="filter-btn__label">확인 공고 숨김</span>
         </button>
@@ -228,6 +244,16 @@ export function FilterBar() {
           <button
             className="filter-reset-btn"
             onClick={() => {
+              trackFilterReset({
+                had_search: filters.q.length > 0,
+                had_filter_types: [
+                  ...(filters.location.length > 0 ? ["location"] : []),
+                  ...(filters.experience.length > 0 ? ["experience"] : []),
+                  ...(filters.employment_type.length > 0 ? ["employment_type"] : []),
+                  ...(filters.source.length > 0 ? ["source"] : []),
+                  ...(hideViewed ? ["hide_viewed"] : []),
+                ],
+              });
               resetFilters();
               if (hideViewed) toggleHideViewed();
               setOpenKey(null);

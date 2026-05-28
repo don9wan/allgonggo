@@ -1,5 +1,6 @@
 import { useJobStore } from "../store/jobStore";
 import { normalizeTitle } from "../utils/format";
+import { trackHiddenJobRestored } from "../lib/analytics";
 import "./HiddenPanel.css";
 
 interface Props {
@@ -42,7 +43,10 @@ export function HiddenPanel({ onClose }: Props) {
                   </div>
                   <button
                     className="hidden-card__restore"
-                    onClick={() => unhideJob(job.id)}
+                    onClick={() => {
+                      trackHiddenJobRestored({ job_id: job.id, company: job.company });
+                      unhideJob(job.id);
+                    }}
                   >
                     복원
                   </button>

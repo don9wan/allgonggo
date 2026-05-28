@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useJobStore } from "../store/jobStore";
 import logoSrc from "../assets/logo.svg";
+import { trackSearchPerformed } from "../lib/analytics";
 import "./Navbar.css";
 
 interface Props {
@@ -37,7 +38,10 @@ export function Navbar({ onOpenSaved, onOpenHidden, searchValue, onSearchChange 
     const v = e.target.value;
     setInputValue(v);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onSearchChange(v), 300);
+    debounceRef.current = setTimeout(() => {
+      onSearchChange(v);
+      if (v.trim().length > 0) trackSearchPerformed(v.trim());
+    }, 300);
   };
 
   const handleClear = () => {
