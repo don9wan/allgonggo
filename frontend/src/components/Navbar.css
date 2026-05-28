@@ -169,12 +169,12 @@
   top: 50%;
   pointer-events: none;
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-placeholder, #c0c0c0);
   white-space: nowrap;
   overflow: hidden;
   max-width: calc(100% - 50px);
   text-overflow: ellipsis;
-  animation: ph-cycle 1500ms ease forwards;
+  animation: ph-cycle 2500ms ease forwards;
 }
 
 @media (max-width: 767px) {

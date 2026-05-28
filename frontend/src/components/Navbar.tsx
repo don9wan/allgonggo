@@ -17,7 +17,7 @@ const PLACEHOLDER_KEYWORDS = [
   '파이썬 개발자', 'Java 개발자', '임베디드 개발자', 'DBA',
 ];
 
-const CYCLE_MS = 1500;
+const CYCLE_MS = 2500;
 
 function useCyclingPlaceholder(keywords: string[]) {
   const shuffled = useMemo(() => {
