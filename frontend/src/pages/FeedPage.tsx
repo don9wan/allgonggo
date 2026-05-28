@@ -103,7 +103,7 @@ export function FeedPage({ returnedJob, onClearReturned }: Props) {
             {filters.q ? (
               <><span className="feed-page__count-query">'{filters.q}'</span> 결과 {total.toLocaleString()}건</>
             ) : (
-              `공고 ${total.toLocaleString()}건`
+              `최근 4주 내 올라온 공고 ${total.toLocaleString()}건`
             )}
           </p>
         )}
