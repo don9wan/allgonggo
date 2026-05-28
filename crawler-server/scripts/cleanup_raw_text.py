@@ -1,6 +1,6 @@
 """
 raw_text 정리 스크립트.
-jasoseol/catch의 기존 레코드 중 field_texts/카테고리 태그가 섞인 raw_text를
+모든 소스의 기존 레코드 중 카테고리 태그 등이 섞인 raw_text를
 title + company 형태로 정규화한다.
 
 사용: python -m scripts.cleanup_raw_text [--dry-run]
@@ -23,12 +23,12 @@ async def cleanup(dry_run: bool = False):
             SELECT COUNT(DISTINCT j.id)
             FROM jobs j
             JOIN job_sources js ON js.job_id = j.id
-            WHERE js.source IN ('jasoseol', 'catch')
+            WHERE js.source IN ('jasoseol', 'catch', 'linkareer')
               AND j.raw_text IS NOT NULL
               AND j.raw_text != (j.title || ' ' || j.company)
         """))
         noisy_count = count_result.scalar()
-        logger.info("노이즈 레코드 수: %d건", noisy_count)
+        logger.info("노이즈 레코드 수: %d건 (jasoseol/catch/linkareer)", noisy_count)
 
         if noisy_count == 0:
             logger.info("정리할 레코드 없음 — 완료")
@@ -39,7 +39,7 @@ async def cleanup(dry_run: bool = False):
             SELECT DISTINCT j.id, j.title, j.company, j.raw_text
             FROM jobs j
             JOIN job_sources js ON js.job_id = j.id
-            WHERE js.source IN ('jasoseol', 'catch')
+            WHERE js.source IN ('jasoseol', 'catch', 'linkareer')
               AND j.raw_text IS NOT NULL
               AND j.raw_text != (j.title || ' ' || j.company)
             LIMIT 5
