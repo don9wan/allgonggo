@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, and_, case
@@ -6,6 +7,8 @@ from typing import Optional
 from app.db.database import get_db
 from app.models.job import Job, JobSource
 from app.schemas.job import JobOut, JobListResponse
+
+FEED_DAYS = 28
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -41,7 +44,8 @@ async def list_jobs(
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    filters = [Job.is_active == True]
+    cutoff = datetime.now(timezone.utc) - timedelta(days=FEED_DAYS)
+    filters = [Job.is_active == True, Job.crawled_at >= cutoff]
     tokens: list[str] = []
 
     if q:

@@ -230,14 +230,14 @@ async def run_all_crawlers():
 
 
 async def run_cleanup():
-    """마감 공고 비활성화. 30일 이상 확인되지 않은 공고를 is_active=False 처리."""
+    """마감 공고 비활성화. 28일 이상 확인되지 않은 공고를 is_active=False 처리."""
     from app.crawlers.db_writer import deactivate_stale_jobs
 
     total = 0
     for source in SOURCES:
         try:
             async with AsyncSessionLocal() as session:
-                n = await deactivate_stale_jobs(session, source, days=30)
+                n = await deactivate_stale_jobs(session, source, days=28)
                 total += n
         except Exception as e:
             logger.exception("[cleanup/%s] 실패: %s", source, e)
